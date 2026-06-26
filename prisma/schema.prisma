@@ -1,0 +1,75 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  plans     Plan[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Plan {
+  id              String           @id @default(cuid())
+  title           String
+  goal            String
+  clarifications  Json             @default("[]")
+  userId          String
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tasks           Task[]
+  weeklySnapshots WeeklySnapshot[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model Task {
+  id          String           @id @default(cuid())
+  title       String
+  description String?
+  planId      String
+  plan        Plan             @relation(fields: [planId], references: [id], onDelete: Cascade)
+  completions TaskCompletion[]
+  weekNumber  Int
+  year        Int
+  order       Int              @default(0)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model WeeklySnapshot {
+  id          String           @id @default(cuid())
+  planId      String
+  plan        Plan             @relation(fields: [planId], references: [id], onDelete: Cascade)
+  weekNumber  Int
+  year        Int
+  summary     String?
+  completions TaskCompletion[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([planId, weekNumber, year])
+}
+
+model TaskCompletion {
+  id               String         @id @default(cuid())
+  taskId           String
+  task             Task           @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  weeklySnapshotId String
+  weeklySnapshot   WeeklySnapshot @relation(fields: [weeklySnapshotId], references: [id], onDelete: Cascade)
+  completed        Boolean        @default(false)
+  notes            String?
+  metadata         Json?
+  completedAt      DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@unique([taskId, weeklySnapshotId])
+}

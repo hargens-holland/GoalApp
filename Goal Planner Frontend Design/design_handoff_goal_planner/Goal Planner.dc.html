@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;}
+body{margin:0;background:#0a0a0c;color:#f4f4f5;font-family:'Hanken Grotesk',system-ui,sans-serif;-webkit-font-smoothing:antialiased;}
+textarea,input,select{font-family:inherit;outline:none;}
+button{font-family:inherit;}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,0.09);border-radius:99px;}
+::-webkit-scrollbar-track{background:transparent;}
+@keyframes spin{to{transform:rotate(360deg);}}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.45;}}
+</style>
+</helmet>
+<div style="min-height:100vh;background:#0a0a0c;">
+
+<sc-if value="{{ showAuth }}" hint-placeholder-val="{{ true }}">
+<div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px;">
+  <div style="display:flex;align-items:center;gap:11px;margin-bottom:28px;">
+    <div style="width:34px;height:34px;border-radius:10px;background:#6d56f0;display:flex;align-items:center;justify-content:center;">
+      <div style="width:12px;height:12px;border:2.5px solid #fff;border-radius:3px;transform:rotate(45deg);"></div>
+    </div>
+    <span style="font:700 19px 'Hanken Grotesk';letter-spacing:-0.01em;">Goal Planner</span>
+  </div>
+  <div style="width:100%;max-width:400px;background:#121217;border:1px solid rgba(255,255,255,0.07);border-radius:18px;padding:26px;">
+    <div style="display:flex;gap:4px;background:#0b0b0e;border:1px solid rgba(255,255,255,0.06);border-radius:11px;padding:4px;margin-bottom:22px;">
+      <button onClick="{{ toLogin }}" style="flex:1;border:none;border-radius:8px;padding:8px;font:600 13px 'Hanken Grotesk';cursor:pointer;background:{{ loginTabBg }};color:{{ loginTabColor }};">Sign in</button>
+      <button onClick="{{ toSignup }}" style="flex:1;border:none;border-radius:8px;padding:8px;font:600 13px 'Hanken Grotesk';cursor:pointer;background:{{ signupTabBg }};color:{{ signupTabColor }};">Sign up</button>
+    </div>
+    <div style="font:700 20px 'Hanken Grotesk';letter-spacing:-0.01em;margin-bottom:4px;">{{ authTitle }}</div>
+    <div style="font:400 13.5px 'Hanken Grotesk';color:#71717a;margin-bottom:20px;">Plan goals into a roadmap and a daily schedule.</div>
+    <sc-if value="{{ isSignup }}" hint-placeholder-val="{{ false }}">
+      <div style="font:500 12px 'Hanken Grotesk';color:#a1a1aa;margin-bottom:6px;">Name</div>
+      <input value="{{ name }}" onInput="{{ onName }}" placeholder="Alex Rivera" style="width:100%;background:#0d0d11;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:11px 14px;color:#f4f4f5;font:400 14px 'Hanken Grotesk';margin-bottom:14px;" style-focus="border-color:#6d56f0;"/>
+    </sc-if>
+    <div style="font:500 12px 'Hanken Grotesk';color:#a1a1aa;margin-bottom:6px;">Email</div>
+    <input value="{{ email }}" onInput="{{ onEmail }}" placeholder="you@example.com" style="width:100%;background:#0d0d11;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:11px 14px;color:#f4f4f5;font:400 14px 'Hanken Grotesk';margin-bottom:14px;" style-focus="border-color:#6d56f0;"/>
+    <div style="font:500 12px 'Hanken Grotesk';color:#a1a1aa;margin-bottom:6px;">Password</div>
+    <input type="password" value="{{ password }}" onInput="{{ onPassword }}" placeholder="••••••••" style="width:100%;background:#0d0d11;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:11px 14px;color:#f4f4f5;font:400 14px 'Hanken Grotesk';margin-bottom:20px;" style-focus="border-color:#6d56f0;"/>
+    <button onClick="{{ onSignIn }}" style="width:100%;background:#6d56f0;color:#fff;border:none;border-radius:11px;padding:12px;font:600 14.5px 'Hanken Grotesk';cursor:pointer;" style-hover="background:#7d68ff;">{{ authCta }}</button>
+  </div>
+  <div style="font:400 12.5px 'Hanken Grotesk';color:#52525b;margin-top:18px;">Demo — any credentials sign you in.</div>
+</div>
+</sc-if>
+
+<sc-if value="{{ showApp }}" hint-placeholder-val="{{ false }}">
+<div style="display:flex;min-height:100vh;">
+
+  <div style="width:248px;flex-shrink:0;height:100vh;position:sticky;top:0;background:#0c0c0f;border-right:1px solid rgba(255,255,255,0.06);display:flex;flex-direction:column;padding:20px 14px;overflow-y:auto;">
+    <div style="display:flex;align-items:center;gap:10px;padding:4px 6px 18px;">
+      <div style="width:30px;height:30px;border-radius:9px;background:#6d56f0;display:flex;align-items:center;justify-content:center;">
+        <div style="width:11px;height:11px;border:2.5px solid #fff;border-radius:3px;transform:rotate(45deg);"></div>
+      </div>
+      <span style="font:700 16px 'Hanken Grotesk';letter-spacing:-0.01em;">Goal Planner</span>
+    </div>
+    <button onClick="{{ navNew }}" style="display:flex;align-items:center;gap:9px;width:100%;background:#6d56f0;color:#fff;border:none;border-radius:10px;padding:10px 12px;font:600 14px 'Hanken Grotesk';cursor:pointer;margin-bottom:18px;" style-hover="background:#7d68ff;">
+      <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="8" y1="3" x2="8" y2="13"/><line x1="3" y1="8" x2="13" y2="8"/></svg>
+      New goal
+    </button>
+    <div style="display:flex;flex-direction:column;gap:2px;">
+      <button onClick="{{ navDash }}" style="display:flex;align-items:center;gap:11px;width:100%;background:{{ navDashBg }};color:{{ navDashColor }};border:none;border-radius:9px;padding:9px 11px;font:500 14px 'Hanken Grotesk';cursor:pointer;text-align:left;" style-hover="background:rgba(255,255,255,0.05);">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><rect x="1" y="1" width="6" height="6" rx="1.6"/><rect x="9" y="1" width="6" height="6" rx="1.6"/><rect x="1" y="9" width="6" height="6" rx="1.6"/><rect x="9" y="9" width="6" height="6" rx="1.6"/></svg>
+        Dashboard
+      </button>
+      <button onClick="{{ navSched }}" style="display:flex;align-items:center;gap:11px;width:100%;background:{{ navSchedBg }};color:{{ navSchedColor }};border:none;border-radius:9px;padding:9px 11px;font:500 14px 'Hanken Grotesk';cursor:pointer;text-align:left;" style-hover="background:rgba(255,255,255,0.05);">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="1.5" y="2.5" width="13" height="12" rx="2"/><line x1="1.5" y1="6" x2="14.5" y2="6"/><line x1="5" y1="1" x2="5" y2="3.6"/><line x1="11" y1="1" x2="11" y2="3.6"/></svg>
+        Calendar
+      </button>
+      <button onClick="{{ navAvail }}" style="display:flex;align-items:center;gap:11px;width:100%;background:{{ navAvailBg }};color:{{ navAvailColor }};border:none;border-radius:9px;padding:9px 11px;font:500 14px 'Hanken Grotesk';cursor:pointer;text-align:left;" style-hover="background:rgba(255,255,255,0.05);">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6.4"/><path d="M8 4.6 V8 L10.4 9.4" stroke-linecap="round"/></svg>
+        Availability
+      </button>
+    </div>
+    <div style="font:600 11px 'Hanken Grotesk';color:#52525b;letter-spacing:0.06em;text-transform:uppercase;padding:18px 11px 8px;">Goals</div>
+    <div style="display:flex;flex-direction:column;gap:1px;">
+      <sc-for list="{{ goalsNav }}" as="g" hint-placeholder-count="4">
+        <button onClick="{{ g.onOpen }}" style="display:flex;align-items:center;gap:10px;width:100%;background:{{ g.activeBg }};border:none;border-radius:8px;padding:8px 11px;cursor:pointer;text-align:left;" style-hover="background:rgba(255,255,255,0.04);">
+          <span style="width:8px;height:8px;border-radius:50%;background:{{ g.color }};flex-shrink:0;"></span>
+          <span style="font:500 13.5px 'Hanken Grotesk';color:#a1a1aa;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ g.title }}</span>
+        </button>
+      </sc-for>
+    </div>
+    <div style="flex:1;"></div>
+    <button onClick="{{ onSignOut }}" style="display:flex;align-items:center;gap:10px;width:100%;background:transparent;border:none;border-radius:9px;padding:9px 11px;font:500 13.5px 'Hanken Grotesk';color:#71717a;cursor:pointer;text-align:left;" style-hover="background:rgba(255,255,255,0.04);color:#a1a1aa;">
+      <span style="width:24px;height:24px;border-radius:50%;background:#6d56f0;display:inline-flex;align-items:center;justify-content:center;font:600 11px 'Hanken Grotesk';color:#fff;">A</span>
+      Sign out
+    </button>
+  </div>
+
+  <div style="flex:1;min-width:0;height:100vh;overflow-y:auto;">
+  <div style="max-width:1200px;margin:0 auto;padding:34px 44px 90px;">
+
+    <sc-if value="{{ routeDashboard }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:26px;">
+        <div>
+          <div style="font:700 26px 'Hanken Grotesk';letter-spacing:-0.02em;">{{ greeting }}</div>
+          <div style="font:400 14px 'Hanken Grotesk';color:#71717a;margin-top:3px;">{{ dateLabel }}</div>
+        </div>
+        <div style="display:flex;gap:9px;">
+          <button onClick="{{ navSched }}" style="display:flex;align-items:center;gap:7px;background:transparent;color:#d4d4d8;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:9px 14px;font:500 13.5px 'Hanken Grotesk';cursor:pointer;" style-hover="background:rgba(255,255,255,0.05);">Calendar</button>
+          <button onClick="{{ navNew }}" style="display:flex;align-items:center;gap:7px;background:#6d56f0;color:#fff;border:none;border-radius:10px;padding:9px 15px;font:600 13.5px 'Hanken Grotesk';cursor:pointer;" style-hover="background:#7d68ff;">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="8" y1="3" x2="8" y2="13"/><line x1="3" y1="8" x2="13" y2="8"/></svg>
+            New goal
+          </button>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;">
+        <div style="background:#141419;border:1px solid rgba(255,255,255,0.06);border-radius:15px;padding:16px 18px;">
+          <div style="font:600 11px 'Hanken Grotesk';color:#71717a;letter-spacing:0.05em;text-transform:uppercase;">Today</div>
+          <div style="display:flex;align-items:baseline;gap:5px;margin-top:7px;"><span style="font:700 26px 'JetBrains Mono';">{{ todayDone }}</span><span style="font:500 15px 'JetBrains Mono';color:#71717a;">/ {{ todayTotal }}</span></div>
+          <div style="font:400 12.5px 'Hanken Grotesk';color:#71717a;margin-top:2px;">tasks done</div>
+        </div>
+        <div style="background:#141419;border:1px solid rgba(255,255,255,0.06);border-radius:15px;padding:16px 18px;">
+          <div style="font:600 11px 'Hanken Grotesk';color:#71717a;letter-spacing:0.05em;text-transform:uppercase;">This week</div>
+          <div style="display:flex;align-items:baseline;gap:5px;margin-top:7px;"><span style="font:700 26px 'JetBrains Mono';">{{ weekPct }}</span><span style="font:500 15px 'JetBrains Mono';color:#71717a;">%</span></div>
+          <div style="font:400 12.5px 'Hanken Grotesk';color:#71717a;margin-top:2px;">completion</div>
+        </div>
+        <div style="background:#141419;border:1px solid rgba(255,255,255,0.06);border-radius:15px;padding:16px 18px;">
+          <div style="font:600 11px 'Hanken Grotesk';color:#71717a;letter-spacing:0.05em;text-transform:uppercase;">Streak</div>
+          <div style="display:flex;align-items:baseline;gap:5px;margin-top:7px;"><span style="font:700 26px 'JetBrains Mono';">{{ streak }}</span><span style="font:500 15px 'JetBrains Mono';color:#71717a;">wks</span></div>
+          <div style="font:400 12.5px 'Hanken Grotesk';color:#71717a;margin-top:2px;">≥50% each week</div>
+        </div>
+        <div style="background:#141419;border:1px solid rgba(255,255,255,0.06);border-radius:15px;padding:16px 18px;">
+          <div style="font:600 11px 'Hanken Grotesk';color:#71717a;letter-spacing:0.05em;text-transform:uppercase;">Active goals</div>
+          <div style="display:flex;align-items:baseline;gap:5px;margin-top:7px;"><span style="font:700 26px 'JetBrains Mono';">{{ activeGoals }}</span></div>
+          <div style="font:400 12.5px 'Hanken Grotesk';color:#71717a;margin-top:2px;">in progress</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.55fr 1fr;gap:18px;align-items:start;">
+        <div style="background:#141419;border:1px solid rgba(255,255,255,0.06);border-radius:16px;overflow:hidden;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;">
+            <div><div style="font:700 17px 'Hanken Grotesk';letter-spacing:-0.01em;">Today</div><div style="font:400 12.5px 'Hanken Grotesk';color:#71717a;margin-top:1px;">{{ dateLabel }}</div></div>
+            <span style="font:600 12.5px 'JetBrains Mono';color:#a1a1aa;background:rgba(255,255,255,0.05);border-radius:99px;padding:5px 11px;">{{ todayDone }} / {{ todayTotal }} done</span>
+          </div>
+          <sc-for list="{{ todayTasks }}" as="task" hint-placeholder-count="6">
+            <div>
+            <div style="display:flex;align-items:flex-start;gap:13px;padding:13px 20px;border-top:1px solid rgba(255,255,255,0.05);" style-hover="background:rgba(255,255,255,0.018);">
+              <button onClick="{{ task.onToggle }}" style="margin-top:1px;width:22px;height:22px;border-radius:7px;border:1.5px solid {{ task.checkBorder }};background:{{ task.checkBg }};color:#fff;font:700 11px 'Hanken Grotesk';display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">{{ task.mark }}</button>
+              <div style="width:44px;flex-shrink:0;font:500 13px 'JetBrains Mono';color:#a1a1aa;padding-top:2px;">{{ task.time }}</div>
+              <div style="flex:1;min-width:0;">
+                <div style="font:500 15px 'Hanken Grotesk';color:{{ task.titleColor }};text-decoration:{{ task.titleDeco }};">{{ task.title }}</div>
+                <div style="font:400 13px 'Hanken Grotesk';color:#71717a;margin-top:2px;">{{ task.desc }}</div>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;flex-shrink:0;padding-top:1px;">
+                <span style="display:inline-flex;align-items:center;gap:6px;font:500 12px 'Hanken Grotesk';color:#a1a1aa;"><span style="width:8px;height:8px;border-radius:50%;background:{{ task.color }};"></span>{{ task.goalTitle }}</span>
+                <button onClick="{{ task.onNoteBtn }}" style="width:30px;height:30px;border-radius:8px;background:transparent;border:1px solid rgba(255,255,255,0.08);color:{{ task.noteBtnColor }};cursor:pointer;display:flex;align-items:center;justify-content:center;" style-hover="color:#d4d4d8;border-color:rgba(255,255,255,0.16);">
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2.5" y="2.5" width="11" height="11" rx="2.5"/><line x1="5" y1="6.2" x2="11" y2="6.2" stroke-linecap="round"/><line x1="5" y1="9" x2="9" y2="9" stroke-linecap="round"/></svg>
+                </button>
+              </div>
+            </div>
+            <sc-if value="{{ task.noteOpen }}" hint-placeholder-val="{{ false }}">
+              <div style="padding:0 20px 14px 80px;">
+                <textarea value="{{ task.notes }}" onInput="{{ task.onNote }}" onBlur="{{ task.onNoteBlur }}" placeholder="Add a note for this task…" style="width:100%;min-height:62px;resize:vertical;background:#0d0d11;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:10px 12px;color:#e4e4e7;font:400 13px 'Hanken Grotesk';" style-focus="border-color:#6d56f0;"></textarea>
+              </div>
+            </sc-if>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="background:#141419;border:1px solid rgba(255,255,255,0.06);border-radius:16px;overflow:hidden;">
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:18px 20px 14px;">
+            <div style="font:700 17px 'Hanken Grotesk';letter-spacing:-0.01em;">Goals</div>
+            <span style="font:500 12.5px 'Hanken Grotesk';color:#71717a;">{{ activeGoals }} active</span>
+          </div>
+          <sc-for list="{{ goals }}" as="goal" hint-placeholder-count="4">
+            <button onClick="{{ goal.onOpen }}" style="display:block;width:100%;text-align:left;background:transparent;border:none;border-top:1px solid rgba(255,255,255,0.05);padding:15px 20px;cursor:pointer;" style-hover="background:rgba(255,255,255,0.018);">
+              <div style="display:flex;align-items:center;gap:10px;">
+                <span style="width:9px;height:9px;border-radius:50%;background:{{ goal.color }};flex-shrink:0;"></span>
+                <span style="flex:1;font:600 14.5px 'Hanken Grotesk';color:#f4f4f5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ goal.title }}</span>
+                <span style="font:500 13px 'JetBrains Mono';color:#a1a1aa;">{{ goal.progress }}%</span>
+              </div>
+              <div style="margin-left:19px;margin-top:6px;">
+                <div style="font:400 12.5px 'Hanken Grotesk';color:#71717a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">{{ goal.active }}</div>
+                <div style="height:6px;border-radius:99px;background:rgba(255,255,255,0.07);margin-top:8px;"><div style="height:100%;border-radius:99px;width:{{ goal.progress }}%;background:{{ goal.color }};"></div></div>
+              </div>
+            </button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ routeSchedule }}" hint-placeholder-val="{{ false }}">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:18px;">
+        <div>
+          <div style="font:700 26px 'Hanken Grotesk';letter-spacing:-0.02em;">Calendar</div>
+          <div style="font:500 14px 'JetBrains Mono';color:#a1a1aa;margin-top:4px;">{{ weekLabel }}</div>
+        </div>
+        <div style="display:flex;gap:9px;align-items:center;">
+          <div style="display:flex;align-items:center;background:#141419;border:1px solid rgba(255,255,255,0.08);border-radius:10px;overflow:hidden;">
+            <button onClick="{{ onPrevWeek }}" style="background:transparent;border:none;color:#d4d4d8;padding:9px 12px;cursor:pointer;display:flex;" style-hover="background:rgba(255,255,255,0.05);"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 4 L6 8 L10 12"/></svg></button>
+            <button onClick="{{ onToday }}" style="background:transparent;border:none;border-left:1px solid rgba(255,255,255,0.08);border-right:1px solid rgba(255,255,255,0.08);color:#d4d4d8;padding:9px 14px;font:500 13px 'Hanken Grotesk';cursor:pointer;" style-hover="background:rgba(255,255,255,0.05);">Today</button>
+            <button onClick="{{ onNextWeek }}" style="background:transparent;border:none;color:#d4d4d8;padding:9px 12px;cursor:pointer;display:flex;" style-hover="background:rgba(255,255,255,0.05);"><svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4 L10 8 L6 12"/></svg></button>
+          </div>
+          <button onClick="{{ onRegenerate }}" style="display:flex;align-items:center;gap:7px;background:#6d56f0;color:#fff;border:none;border-radius:10px;padding:9px 15px;font:600 13.5px 'Hanken Grotesk';cursor:pointer;" style-hover="background:#7d68ff;">
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M13 8 a5 5 0 1 1 -1.6 -3.7"/><path d="M13 2 V5 H10"/></svg>
+            Regenerate week
+          </button>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-wrap:wrap;gap:14px;margin-bottom:18px;">
+        <sc-for list="{{ legend }}" as="lg" hint-placeholder-count="4">
+          <span style="display:inline-flex;align-items:center;gap:7px;font:500 12.5px 'Hanken Grotesk';color:#a1a1aa;"><span style="width:9px;height:9px;border-radius:3px;background:{{ lg.color }};"></span>{{ lg.title }}</span>
+        </sc-for>
+      </div>
+
+      <sc-if value="{{ weekEmpty }}" hint-placeholder-val="{{ false }}">
+        <div style="background:#141419;border:1px dashed rgba(255,255,255,0.1);border-radius:14px;padding:16px 20px;margin-bottom:14px;font:400 13.5px 'Hanken Grotesk';color:#71717a;">No tasks scheduled for this week yet. Hit <span style="color:#a899ff;">Regenerate week</span> to let the Scheduler plan it.</div>
+      </sc-if>
+
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:10px;">
+        <sc-for list="{{ weekDays }}" as="day" hint-placeholder-count="7">
+          <div style="background:#101014;border:1px solid {{ day.colBorder }};border-radius:14px;padding:9px;min-height:430px;min-width:0;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:3px 5px 9px;">
+              <span style="font:600 12px 'Hanken Grotesk';color:{{ day.headColor }};">{{ day.name }}</span>
+              <span style="font:600 13px 'JetBrains Mono';color:{{ day.headColor }};background:{{ day.headBg }};border-radius:7px;padding:1px 7px;">{{ day.num }}</span>
+            </div>
+            <sc-for list="{{ day.tasks }}" as="ct" hint-placeholder-count="2">
+              <button onClick="{{ ct.onToggle }}" style="display:block;width:100%;text-align:left;background:#16161c;border:1px solid rgba(255,255,255,0.06);border-left:3px solid {{ ct.color }};border-radius:9px;padding:7px 9px;margin-bottom:7px;cursor:pointer;" style-hover="background:#1c1c24;">
+                <div style="font:500 11px 'JetBrains Mono';color:{{ ct.color }};">{{ ct.time }}</div>
+                <div style="font:500 12.5px 'Hanken Grotesk';color:{{ ct.titleColor }};text-decoration:{{ ct.titleDeco }};margin-top:1px;line-height:1.25;">{{ ct.title }}</div>
+              </button>
+            </sc-for>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ routeGoal }}" hint-placeholder-val="{{ false }}">
+      <button onClick="{{ navDash }}" style="display:inline-flex;align-items:center;gap:7px;background:transparent;border:none;color:#71717a;font:500 13px 'Hanken Grotesk';cursor:pointer;padding:0;margin-bottom:18px;" style-hover="color:#a1a1aa;">
+        <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 L5 8 L9 12"/><line x1="5" y1="8" x2="13" y2="8"/></svg>
+        Dashboard
+      </button>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:20px;margin-bottom:20px;">
+        <div style="min-width:0;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px;">
+            <span style="width:11px;height:11px;border-radius:50%;background:{{ detail.color }};"></span>
+            <span style="font:600 11px 'Hanken Grotesk';color:{{ detail.color }};background:{{ detail.soft }};border-radius:99px;padding:3px 10px;text-transform:uppercase;letter-spacing:0.04em;">{{ detail.status }}</span>
+          </div>
+          <div style="font:700 27px 'Hanken Grotesk';letter-spacing:-0.02em;">{{ detail.title }}</div>
+          <div style="font:400 15px 'Hanken Grotesk';color:#a1a1aa;margin-top:5px;max-width:560px;">{{ detail.goal }}</div>
+        </div>
+        <div style="display:flex;gap:9px;flex-shrink:0;">
+          <button onClick="{{ detail.onReview }}" style="background:transparent;color:#d4d4d8;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:9px 14px;font:500 13px 'Hanken Grotesk';cursor:pointer;white-space:nowrap;" style-hover="background:rgba(255,255,255,0.05);">Review progress</button>
+          <button onClick="{{ detail.onAdjust }}" style="background:transparent;color:#d4d4d8;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:9px 14px;font:500 13px 'Hanken Grotesk';cursor:pointer;white-space:nowrap;" style-hover="background:rgba(255,255,255,0.05);">Adjust roadmap</button>
+        </div>
+      </div>
+
+      <div style="background:{{ detail.soft }};border:1px solid rgba(255,255,255,0.06);border-radius:14px;padding:15px 18px;margin-bottom:22px;">
+        <div style="font:600 11px 'Hanken Grotesk';color:{{ detail.color }};letter-spacing:0.05em;text-transform:uppercase;margin-bottom:5px;">This week's focus</div>
+        <div style="font:500 14.5px 'Hanken Grotesk';color:#e4e4e7;line-height:1.45;">{{ detail.focus }}</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1.5fr 1fr;gap:18px;align-items:start;">
+        <div style="background:#141419;border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:22px 24px;">
+          <div style="font:700 16px 'Hanken Grotesk';letter-spacing:-0.01em;margin-bottom:18px;">Roadmap</div>
+          <sc-for list="{{ detail.milestones }}" as="m" hint-placeholder-count="5">
+            <div style="display:flex;gap:15px;">
+              <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;">
+                <div style="width:26px;height:26px;border-radius:50%;background:{{ m.dotBg }};border:2px solid {{ m.dotBorder }};display:flex;align-items:center;justify-content:center;color:#fff;font:700 12px 'Hanken Grotesk';">{{ m.dotMark }}<span style="width:9px;height:9px;border-radius:50%;background:{{ m.dotInner }};"></span></div>
+                <sc-if value="{{ m.notLast }}" hint-placeholder-val="{{ true }}"><div style="width:2px;flex:1;min-height:34px;background:rgba(255,255,255,0.08);margin:3px 0;"></div></sc-if>
+              </div>
+              <div style="flex:1;min-width:0;padding-bottom:22px;">
+                <div style="display:flex;align-items:center;gap:9px;">
+                  <span style="font:600 15.5px 'Hanken Grotesk';color:{{ m.titleColor }};">{{ m.title }}</span>
+                  <span style="font:600 10.5px 'Hanken Grotesk';color:{{ m.chipColor }};background:{{ m.chipBg }};border-radius:99px;padding:2px 8px;text-transform:uppercase;letter-spacing:0.03em;">{{ m.statusLabel }}</span>
+                </div>
+                <div style="font:400 13.5px 'Hanken Grotesk';color:#a1a1aa;margin-top:4px;line-height:1.45;">{{ m.desc }}</div>
+                <div style="margin-top:9px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.05);border-radius:9px;padding:8px 11px;font:400 12.5px 'Hanken Grotesk';color:#a1a1aa;"><span style="color:#71717a;">Success — </span>{{ m.crit }}</div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:16px;">
+          <div style="background:#141419;border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:20px;">
+            <div style="font:600 11px 'Hanken Grotesk';color:#71717a;letter-spacing:0.05em;text-transform:uppercase;">Overall progress</div>
+            <div style="display:flex;align-items:baseline;gap:5px;margin-top:8px;"><span style="font:700 34px 'JetBrains Mono';color:#f4f4f5;">{{ detail.progress }}</span><span style="font:600 18px 'JetBrains Mono';color:#71717a;">%</span></div>
+            <div style="height:8px;border-radius:99px;background:rgba(255,255,255,0.07);margin-top:10px;"><div style="height:100%;border-radius:99px;width:{{ detail.progress }}%;background:{{ detail.color }};"></div></div>
+            <div style="font:500 13px 'JetBrains Mono';color:#a1a1aa;margin-top:12px;">{{ detail.doneMiles }} / {{ detail.totalMiles }} milestones done</div>
+            <div style="font:400 13px 'Hanken Grotesk';color:#71717a;margin-top:12px;line-height:1.5;border-top:1px solid rgba(255,255,255,0.06);padding-top:12px;">{{ detail.where }}</div>
+          </div>
+          <div style="background:#141419;border:1px solid rgba(255,255,255,0.06);border-radius:16px;padding:20px;">
+            <div style="font:600 11px 'Hanken Grotesk';color:#71717a;letter-spacing:0.05em;text-transform:uppercase;">Weekly progress</div>
+            <div style="display:flex;align-items:flex-end;gap:7px;height:68px;margin-top:14px;">
+              <sc-for list="{{ detail.history }}" as="h" hint-placeholder-count="8">
+                <div style="flex:1;border-radius:4px 4px 0 0;height:{{ h.barH }}px;background:{{ h.color }};opacity:{{ h.op }};"></div>
+              </sc-for>
+            </div>
+            <div style="display:flex;justify-content:space-between;font:400 10.5px 'JetBrains Mono';color:#52525b;margin-top:7px;"><span>8 wks ago</span><span>now</span></div>
+          </div>
+          <div style="background:#141419;border:1px solid rgba(255,255,255,0.06);border-radius:16px;overflow:hidden;">
+            <div style="font:600 14px 'Hanken Grotesk';padding:16px 18px 10px;">This week's tasks</div>
+            <sc-for list="{{ detail.tasks }}" as="dt" hint-placeholder-count="4">
+              <div style="display:flex;align-items:center;gap:11px;padding:10px 18px;border-top:1px solid rgba(255,255,255,0.05);">
+                <button onClick="{{ dt.onToggle }}" style="width:20px;height:20px;border-radius:6px;border:1.5px solid {{ dt.checkBorder }};background:{{ dt.checkBg }};color:#fff;font:700 10px 'Hanken Grotesk';display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;">{{ dt.mark }}</button>
+                <span style="font:500 12px 'JetBrains Mono';color:#71717a;width:38px;flex-shrink:0;">{{ dt.time }}</span>
+                <span style="flex:1;font:500 13.5px 'Hanken Grotesk';color:{{ dt.titleColor }};text-decoration:{{ dt.titleDeco }};">{{ dt.title }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ routeNewGoal }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width:580px;margin:30px auto 0;">
+        <div style="display:flex;gap:7px;margin-bottom:26px;">
+          <div style="flex:1;height:4px;border-radius:99px;background:{{ wiz.dot0Bg }};"></div>
+          <div style="flex:1;height:4px;border-radius:99px;background:{{ wiz.dot1Bg }};"></div>
+          <div style="flex:1;height:4px;border-radius:99px;background:{{ wiz.dot2Bg }};"></div>
+        </div>
+
+        <sc-if value="{{ wiz.s0 }}" hint-placeholder-val="{{ true }}">
+          <div style="font:600 12px 'Hanken Grotesk';color:#a899ff;letter-spacing:0.04em;text-transform:uppercase;margin-bottom:8px;">New goal · Step 1 of 3</div>
+          <div style="font:700 25px 'Hanken Grotesk';letter-spacing:-0.02em;margin-bottom:8px;">What do you want to achieve?</div>
+          <div style="font:400 14.5px 'Hanken Grotesk';color:#71717a;margin-bottom:20px;line-height:1.5;">State it in plain language. The Architect agent turns it into a sequenced roadmap, then the Scheduler drops the first tasks into your calendar.</div>
+          <textarea value="{{ wiz.goal }}" onInput="{{ wiz.onGoal }}" placeholder="e.g. Learn to play three fingerstyle guitar songs from memory by the end of the year" style="width:100%;min-height:120px;resize:vertical;background:#121217;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:15px 17px;color:#f4f4f5;font:400 15px 'Hanken Grotesk';line-height:1.5;" style-focus="border-color:#6d56f0;"></textarea>
+          <button onClick="{{ wiz.onStart }}" style="margin-top:18px;width:100%;background:{{ wiz.startBg }};color:#fff;border:none;border-radius:12px;padding:13px;font:600 15px 'Hanken Grotesk';cursor:{{ wiz.startCursor }};">Continue</button>
+        </sc-if>
+
+        <sc-if value="{{ wiz.s1 }}" hint-placeholder-val="{{ false }}">
+          <div style="font:600 12px 'Hanken Grotesk';color:#a899ff;letter-spacing:0.04em;text-transform:uppercase;margin-bottom:8px;">A few quick questions · {{ wiz.qNum }} of {{ wiz.qTotal }}</div>
+          <div style="font:700 24px 'Hanken Grotesk';letter-spacing:-0.02em;margin-bottom:20px;line-height:1.3;">{{ wiz.question }}</div>
+          <textarea value="{{ wiz.answer }}" onInput="{{ wiz.onAnswer }}" placeholder="Type your answer…" style="width:100%;min-height:100px;resize:vertical;background:#121217;border:1px solid rgba(255,255,255,0.1);border-radius:14px;padding:15px 17px;color:#f4f4f5;font:400 15px 'Hanken Grotesk';line-height:1.5;" style-focus="border-color:#6d56f0;"></textarea>
+          <div style="display:flex;gap:10px;margin-top:18px;">
+            <button onClick="{{ wiz.onSkip }}" style="flex:0 0 auto;background:transparent;color:#a1a1aa;border:1px solid rgba(255,255,255,0.1);border-radius:12px;padding:13px 20px;font:500 14px 'Hanken Grotesk';cursor:pointer;" style-hover="background:rgba(255,255,255,0.05);">Skip</button>
+            <button onClick="{{ wiz.onNext }}" style="flex:1;background:#6d56f0;color:#fff;border:none;border-radius:12px;padding:13px;font:600 15px 'Hanken Grotesk';cursor:pointer;" style-hover="background:#7d68ff;">{{ wiz.nextLabel }}</button>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ wiz.s2 }}" hint-placeholder-val="{{ false }}">
+          <div style="display:flex;flex-direction:column;align-items:center;text-align:center;padding:40px 0;">
+            <div style="width:46px;height:46px;border-radius:50%;border:3px solid rgba(255,255,255,0.1);border-top-color:#6d56f0;animation:spin .8s linear infinite;margin-bottom:22px;"></div>
+            <div style="font:700 21px 'Hanken Grotesk';letter-spacing:-0.01em;margin-bottom:8px;">Building your roadmap…</div>
+            <div style="font:400 14px 'Hanken Grotesk';color:#71717a;max-width:340px;line-height:1.5;">The Architect is breaking your goal into milestones and the Scheduler is placing this week's tasks into your free time.</div>
+          </div>
+        </sc-if>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ routeAvailability }}" hint-placeholder-val="{{ false }}">
+      <div style="max-width:680px;">
+        <div style="font:700 26px 'Hanken Grotesk';letter-spacing:-0.02em;">Availability</div>
+        <div style="font:400 14.5px 'Hanken Grotesk';color:#71717a;margin-top:5px;margin-bottom:24px;line-height:1.5;max-width:560px;">The Scheduler only places daily tasks inside the time windows you set here. Turn off a day to keep it free.</div>
+        <div style="background:#141419;border:1px solid rgba(255,255,255,0.06);border-radius:16px;overflow:hidden;">
+          <sc-for list="{{ avail }}" as="d" hint-placeholder-count="7">
+            <div style="display:flex;align-items:center;gap:16px;padding:14px 20px;border-top:1px solid rgba(255,255,255,0.05);">
+              <button onClick="{{ d.onToggle }}" style="width:42px;height:24px;border-radius:99px;background:{{ d.trackBg }};border:none;position:relative;cursor:pointer;flex-shrink:0;">
+                <span style="position:absolute;top:3px;left:{{ d.knobLeft }};width:18px;height:18px;border-radius:50%;background:#fff;transition:left .15s;"></span>
+              </button>
+              <span style="width:96px;flex-shrink:0;font:600 14.5px 'Hanken Grotesk';color:{{ d.nameColor }};">{{ d.name }}</span>
+              <div style="flex:1;display:flex;align-items:center;gap:10px;opacity:{{ d.rowOpacity }};">
+                <select value="{{ d.start }}" onChange="{{ d.onStart }}" style="background:#16161c;color:#f4f4f5;border:1px solid rgba(255,255,255,0.1);border-radius:9px;padding:7px 10px;font:500 13px 'JetBrains Mono';cursor:pointer;">
+                  <sc-for list="{{ timeOptions }}" as="o" hint-placeholder-count="4"><option value="{{ o.value }}">{{ o.label }}</option></sc-for>
+                </select>
+                <span style="color:#52525b;font:400 13px 'Hanken Grotesk';">to</span>
+                <select value="{{ d.end }}" onChange="{{ d.onEnd }}" style="background:#16161c;color:#f4f4f5;border:1px solid rgba(255,255,255,0.1);border-radius:9px;padding:7px 10px;font:500 13px 'JetBrains Mono';cursor:pointer;">
+                  <sc-for list="{{ timeOptions }}" as="o2" hint-placeholder-count="4"><option value="{{ o2.value }}">{{ o2.label }}</option></sc-for>
+                </select>
+                <span style="margin-left:auto;font:500 12px 'Hanken Grotesk';color:{{ d.statusColor }};">{{ d.statusLabel }}</span>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+        <button onClick="{{ onSaveAvail }}" style="margin-top:20px;background:#6d56f0;color:#fff;border:none;border-radius:11px;padding:11px 22px;font:600 14px 'Hanken Grotesk';cursor:pointer;" style-hover="background:#7d68ff;">Save availability</button>
+      </div>
+    </sc-if>
+
+  </div>
+  </div>
+</div>
+</sc-if>
+
+<sc-if value="{{ hasToast }}" hint-placeholder-val="{{ false }}">
+  <div style="position:fixed;bottom:26px;left:50%;transform:translateX(-50%);background:#1c1c24;border:1px solid rgba(255,255,255,0.12);border-radius:11px;padding:12px 20px;font:500 13.5px 'Hanken Grotesk';color:#e4e4e7;box-shadow:0 12px 40px rgba(0,0,0,0.5);z-index:100;">{{ toast }}</div>
+</sc-if>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = (() => {
+    const now = new Date();
+    const dow = now.getDay();
+    const todayIdx = dow === 0 ? 6 : dow - 1;
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - todayIdx);
+    monday.setHours(0, 0, 0, 0);
+
+    const goals = [
+      { id: 'g_guitar', title: 'Fingerstyle Guitar', goal: 'Learn to play 3 fingerstyle songs fluently from memory', hue: 285, progress: 38, status: 'active',
+        activeMilestone: 'Clean chord transitions',
+        focus: 'Drill the G→C→D→Em loop until transitions are clean at 80bpm with no buzz.',
+        where: "You've nailed the open chords and basic picking. The friction now is speed and cleanliness between chords.",
+        history: [30, 45, 40, 55, 60, 50, 65, 58],
+        milestones: [
+          { title: 'Tune & basic open chords', desc: 'Learn G, C, D, Em, Am and fret them cleanly.', crit: 'Play all 6 open chords from memory, no buzz.', status: 'done' },
+          { title: 'Right-hand fingerpicking', desc: 'Thumb-and-three picking over open chords.', crit: 'Hold a Travis pattern at 60bpm.', status: 'done' },
+          { title: 'Clean chord transitions', desc: 'Switch chords mid-song without pausing.', crit: '4 chords per bar at 80bpm, no buzz.', status: 'active' },
+          { title: 'First full song', desc: 'Learn one song start to finish.', crit: 'Play song A at tempo, from memory.', status: 'locked' },
+          { title: 'Three songs + dynamics', desc: 'Add two more songs and expressive dynamics.', crit: 'Perform 3 songs back to back.', status: 'locked' },
+        ] },
+      { id: 'g_run', title: 'Half Marathon', goal: 'Finish a half marathon in under 2 hours', hue: 155, progress: 64, status: 'active',
+        activeMilestone: 'Build a 12K long-run base',
+        focus: 'Get the long run to 12K this week while keeping every easy day genuinely easy.',
+        where: 'Weekly volume is solid and 8K feels comfortable. Now it is about extending the long run safely.',
+        history: [35, 42, 50, 55, 60, 58, 66, 64],
+        milestones: [
+          { title: 'Run/walk to 5K', desc: 'Alternate jog and walk to cover 5K.', crit: 'Complete 5K run/walk without stopping.', status: 'done' },
+          { title: 'Continuous 5K', desc: 'Run 5K with no walking breaks.', crit: '5K nonstop at conversational pace.', status: 'done' },
+          { title: 'Build to 8K', desc: 'Extend the long run to 8K.', crit: 'Comfortable 8K long run.', status: 'done' },
+          { title: '12K long-run base', desc: 'Build the weekly long run to 12K.', crit: 'Finish 12K feeling strong.', status: 'active' },
+          { title: 'Race pace + taper', desc: 'Sharpen pace, then taper for race day.', crit: 'Hold goal pace for 10K, then taper 2 weeks.', status: 'locked' },
+        ] },
+      { id: 'g_saas', title: 'Ship FocusFlow', goal: 'Launch my SaaS side project to the first 10 paying users', hue: 245, progress: 22, status: 'active',
+        activeMilestone: 'Build the core MVP',
+        focus: 'Ship the auth flow and dashboard shell so the core loop is usable end to end.',
+        where: 'Scope is validated and the stack is chosen. The MVP is just starting to take shape.',
+        history: [0, 5, 10, 12, 18, 20, 24, 22],
+        milestones: [
+          { title: 'Validate idea + scope MVP', desc: 'Talk to users and define the smallest useful product.', crit: 'Written one-page MVP spec.', status: 'done' },
+          { title: 'Build the core MVP', desc: 'Auth, data model, and the main daily loop.', crit: 'A user can sign in and use the core flow.', status: 'active' },
+          { title: 'Onboarding + billing', desc: 'First-run experience and Stripe checkout.', crit: 'A new user can pay and get started.', status: 'locked' },
+          { title: 'Private beta (5 users)', desc: 'Invite a handful of real users.', crit: '5 users active for a full week.', status: 'locked' },
+          { title: 'Public launch (10 users)', desc: 'Open sign-ups and gather paying users.', crit: '10 paying users onboarded.', status: 'locked' },
+        ] },
+      { id: 'g_spanish', title: 'Conversational Spanish', goal: 'Hold a 10-minute conversation comfortably in Spanish', hue: 40, progress: 50, status: 'active',
+        activeMilestone: 'Present tense + first 300 words',
+        focus: 'Lock in present-tense conjugation and reach 300 active vocabulary words.',
+        where: 'Pronunciation is good and you recognize common words. Output is the gap — speaking still feels slow.',
+        history: [15, 22, 30, 38, 44, 46, 52, 50],
+        milestones: [
+          { title: 'Pronunciation + 100 words', desc: 'Sounds, accents, and first core vocabulary.', crit: 'Read aloud clearly, 100 words known.', status: 'done' },
+          { title: 'Present tense + 300 words', desc: 'Conjugate regular verbs and grow vocabulary.', crit: 'Form present-tense sentences, 300 words.', status: 'active' },
+          { title: 'Past tense + phrases', desc: 'Preterite, imperfect, and everyday phrases.', crit: 'Tell a short story in the past tense.', status: 'locked' },
+          { title: 'Listening fluency', desc: 'Understand natural-speed audio.', crit: 'Follow a podcast without subtitles.', status: 'locked' },
+          { title: '10-minute conversation', desc: 'Sustain a real back-and-forth.', crit: 'Hold a 10-minute conversation comfortably.', status: 'locked' },
+        ] },
+    ];
+
+    const T = (goalId, title, desc, dayIndex, start, dur, status) => ({ goalId, title, desc, dayIndex, start, dur, status: status || 'pending', notes: '' });
+    const tasks = [
+      T('g_run', 'Easy recovery 5K', 'Conversational pace, nose-breathing only.', 0, 420, 30, 'done'),
+      T('g_saas', 'Sketch the data model', 'Goals, milestones, tasks, snapshots.', 0, 840, 60, 'done'),
+      T('g_spanish', 'Grammar: present tense', 'Regular -ar / -er / -ir verbs.', 0, 1140, 25),
+      T('g_guitar', 'Metronome chord changes', 'G↔C↔D at 70bpm, four per bar.', 1, 540, 20, 'done'),
+      T('g_saas', 'Set up Next.js + auth', 'Scaffold the app, wire NextAuth credentials.', 1, 600, 90),
+      T('g_run', 'Mobility + core', 'Hips, ankles, and a 10-minute core circuit.', 1, 1080, 20),
+      T('g_run', 'Intervals 6×400m', '90s easy jog between reps.', 2, 420, 40),
+      T('g_spanish', 'Listening: slow podcast', 'One episode, note 5 new words.', 2, 720, 20),
+      T('g_guitar', 'New song — section A', 'First 8 bars, hands separate.', 2, 1080, 30),
+      T('g_run', 'Easy 5K', 'Keep heart rate under 150.', 3, 420, 30, 'done'),
+      T('g_saas', 'Build dashboard UI', 'Today list and goals list shell.', 3, 600, 90),
+      T('g_spanish', 'Speaking drill', 'Describe your day out loud, 5 minutes.', 3, 1020, 15),
+      T('g_run', 'Tempo run intervals', '3×8 min at threshold, 2 min jog.', 4, 420, 35, 'done'),
+      T('g_guitar', 'Chord transition drills', 'G→C→D→Em loop, 80bpm, no buzz.', 4, 540, 20),
+      T('g_saas', 'Build login + auth flow', 'Credentials sign-in and protected routes.', 4, 630, 90),
+      T('g_spanish', 'Vocab review: 20 new words', 'Run the spaced-repetition deck.', 4, 750, 25, 'done'),
+      T('g_guitar', 'Fingerpicking: Travis pattern', 'Apply over the new song chords.', 4, 1080, 30),
+      T('g_run', 'Mobility + stretch', 'Cooldown and foam-roll calves.', 4, 1200, 15),
+      T('g_run', 'Long run 12K', 'Steady effort, fuel at 6K.', 5, 480, 80),
+      T('g_guitar', 'Full song run-through', 'Play song A start to finish, slow.', 5, 660, 30),
+      T('g_spanish', 'Weekly review', 'Re-test the week of 60 words.', 6, 600, 30),
+      T('g_saas', 'Deploy preview build', 'Push to Vercel and smoke-test.', 6, 900, 45),
+    ];
+    tasks.forEach((t, i) => { t.id = 't' + i; });
+
+    const availability = [
+      { dayOfWeek: 0, on: false, start: 600, end: 780 },
+      { dayOfWeek: 1, on: true, start: 540, end: 1020 },
+      { dayOfWeek: 2, on: true, start: 540, end: 1020 },
+      { dayOfWeek: 3, on: true, start: 540, end: 1020 },
+      { dayOfWeek: 4, on: true, start: 540, end: 1020 },
+      { dayOfWeek: 5, on: true, start: 540, end: 1020 },
+      { dayOfWeek: 6, on: true, start: 600, end: 840 },
+    ];
+
+    return {
+      authed: false, route: 'login', authMode: 'login', email: '', password: '', name: '',
+      goals, tasks, monday, todayIdx, weekOffset: 0, selectedGoalId: 'g_guitar',
+      expandedNote: null,
+      ng: { step: 0, goal: '', qIndex: 0, questions: [], answers: [] },
+      availability, toast: null,
+    };
+  })();
+
+  pad(n) { return String(n).padStart(2, '0'); }
+  fmt(m) { if (m == null) return ''; return this.pad(Math.floor(m / 60)) + ':' + this.pad(m % 60); }
+  goalById(id) { return this.state.goals.find(g => g.id === id); }
+  colorFor(g) { return 'oklch(0.74 0.14 ' + g.hue + ')'; }
+  softFor(g) { return 'oklch(0.74 0.14 ' + g.hue + ' / 0.15)'; }
+
+  showToast(msg) { this.setState({ toast: msg }); clearTimeout(this._t); this._t = setTimeout(() => this.setState({ toast: null }), 2400); }
+  navigate(route) { this.setState({ route }); }
+  openGoal(id) { this.setState({ route: 'goal', selectedGoalId: id }); }
+  toggleTask(id) { this.setState(s => ({ tasks: s.tasks.map(t => t.id === id ? { ...t, status: t.status === 'done' ? 'pending' : 'done' } : t) })); }
+  toggleNote(id) { this.setState(s => ({ expandedNote: s.expandedNote === id ? null : id })); }
+  setNote(id, val) { this.setState(s => ({ tasks: s.tasks.map(t => t.id === id ? { ...t, notes: val } : t) })); }
+  signIn() { this.setState({ authed: true, route: 'dashboard' }); }
+  signOut() { this.setState({ authed: false, route: 'login' }); }
+  setWeek(off) { this.setState({ weekOffset: off }); }
+  setAvail(dow, field, val) { this.setState(s => ({ availability: s.availability.map(a => a.dayOfWeek === dow ? { ...a, [field]: Number(val) } : a) })); }
+  toggleAvail(dow) { this.setState(s => ({ availability: s.availability.map(a => a.dayOfWeek === dow ? { ...a, on: !a.on } : a) })); }
+
+  ngSet(patch) { this.setState(s => ({ ng: { ...s.ng, ...patch } })); }
+  ngStart() {
+    if (this.state.ng.goal.trim().length < 4) return;
+    const qs = ['Roughly how much time can you give this each week?', 'What is your current level or starting point?', 'Is there a deadline or event you are aiming for?'];
+    this.ngSet({ step: 1, qIndex: 0, questions: qs, answers: ['', '', ''] });
+  }
+  ngSetAnswer(val) { const a = [...this.state.ng.answers]; a[this.state.ng.qIndex] = val; this.ngSet({ answers: a }); }
+  ngAnswer() {
+    const ng = this.state.ng;
+    if (ng.qIndex < ng.questions.length - 1) this.ngSet({ qIndex: ng.qIndex + 1 });
+    else { this.ngSet({ step: 2 }); setTimeout(() => this.ngFinish(), 2400); }
+  }
+  ngFinish() {
+    const ng = this.state.ng;
+    const id = 'g_new' + Date.now();
+    const title = ng.goal.trim().split(/\s+/).slice(0, 5).join(' ');
+    const newGoal = {
+      id, title: title.length > 38 ? title.slice(0, 38) + '…' : title, goal: ng.goal.trim(), hue: 330, progress: 0, status: 'active',
+      activeMilestone: 'Set up and get started',
+      focus: 'Set up everything you need and complete the first milestone this week.',
+      where: 'Just getting started — your roadmap is ready and the first tasks are scheduled.',
+      history: [0, 0, 0, 0, 0, 0, 0, 0],
+      milestones: [
+        { title: 'Set up and get started', desc: 'Prepare everything you need to begin.', crit: 'Environment ready, first session done.', status: 'active' },
+        { title: 'Build the basics', desc: 'Establish the core fundamentals.', crit: 'Comfortable with the fundamentals.', status: 'locked' },
+        { title: 'Apply and practice', desc: 'Put the basics into regular practice.', crit: 'Consistent weekly practice held.', status: 'locked' },
+        { title: 'Reach the goal', desc: 'Bring it all together.', crit: 'Goal achieved.', status: 'locked' },
+      ],
+    };
+    this.setState(s => ({ goals: [...s.goals, newGoal], route: 'goal', selectedGoalId: id, ng: { step: 0, goal: '', qIndex: 0, questions: [], answers: [] } }));
+  }
+
+  renderVals() {
+    const s = this.state;
+    const MN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const WD = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const now = new Date();
+    const h = now.getHours();
+    const greeting = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
+    const dateLabel = WD[now.getDay()] + ', ' + MN[now.getMonth()] + ' ' + now.getDate();
+
+    const map = (t) => {
+      const g = this.goalById(t.goalId);
+      const c = this.colorFor(g);
+      const done = t.status === 'done';
+      return {
+        id: t.id, title: t.title, desc: t.desc, time: this.fmt(t.start),
+        goalTitle: g.title, color: c, soft: this.softFor(g), done,
+        checkBg: done ? c : 'transparent', checkBorder: done ? c : 'rgba(255,255,255,0.22)', mark: done ? '✓' : '',
+        titleColor: done ? '#6b6b73' : '#f4f4f5', titleDeco: done ? 'line-through' : 'none',
+        notes: t.notes, noteOpen: s.expandedNote === t.id, noteBtnColor: t.notes ? c : '#71717a',
+        onToggle: () => this.toggleTask(t.id), onNoteBtn: () => this.toggleNote(t.id),
+        onNote: (e) => this.setNote(t.id, e.target.value), onNoteBlur: () => { if (s.tasks.find(x => x.id === t.id).notes) this.showToast('Note saved'); },
+      };
+    };
+
+    const todayTasks = s.tasks.filter(t => t.dayIndex === s.todayIdx).sort((a, b) => (a.start ?? 9999) - (b.start ?? 9999)).map(map);
+    const todayDone = todayTasks.filter(t => t.done).length;
+    const weekDoneCount = s.tasks.filter(t => t.status === 'done').length;
+    const weekPct = Math.round((weekDoneCount / s.tasks.length) * 100);
+
+    const goals = s.goals.map(g => ({ id: g.id, title: g.title, active: g.activeMilestone, progress: g.progress, color: this.colorFor(g), onOpen: () => this.openGoal(g.id) }));
+    const hist = [62, 41, 71, 55, 80, 67, 74, 69];
+    let streak = 0; for (let i = hist.length - 1; i >= 0; i--) { if (hist[i] >= 50) streak++; else break; }
+
+    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const weekDays = dayNames.map((dn, i) => {
+      const d = new Date(s.monday); d.setDate(s.monday.getDate() + s.weekOffset * 7 + i);
+      const isToday = s.weekOffset === 0 && i === s.todayIdx;
+      const dt = s.weekOffset === 0 ? s.tasks.filter(t => t.dayIndex === i).sort((a, b) => (a.start ?? 9999) - (b.start ?? 9999)).map(map) : [];
+      return { name: dn, num: d.getDate(), isToday, tasks: dt, headColor: isToday ? '#f4f4f5' : '#a1a1aa', headBg: isToday ? 'rgba(109,86,240,0.18)' : 'transparent', colBorder: isToday ? 'rgba(109,86,240,0.3)' : 'rgba(255,255,255,0.05)' };
+    });
+    const weekEmpty = weekDays.every(d => d.tasks.length === 0);
+    const wkStart = new Date(s.monday); wkStart.setDate(s.monday.getDate() + s.weekOffset * 7);
+    const wkEnd = new Date(wkStart); wkEnd.setDate(wkStart.getDate() + 6);
+    const weekLabel = MN[wkStart.getMonth()] + ' ' + wkStart.getDate() + ' – ' + MN[wkEnd.getMonth()] + ' ' + wkEnd.getDate() + ', ' + wkEnd.getFullYear();
+    const legend = s.goals.map(g => ({ title: g.title, color: this.colorFor(g) }));
+
+    const g = this.goalById(s.selectedGoalId);
+    const detail = g ? {
+      id: g.id, title: g.title, goal: g.goal, progress: g.progress, color: this.colorFor(g), soft: this.softFor(g),
+      focus: g.focus, where: g.where, status: g.status,
+      doneMiles: g.milestones.filter(m => m.status === 'done').length, totalMiles: g.milestones.length,
+      milestones: g.milestones.map((m, i) => {
+        const done = m.status === 'done', active = m.status === 'active';
+        const c = this.colorFor(g);
+        return {
+          title: m.title, desc: m.desc, crit: m.crit, notLast: i !== g.milestones.length - 1,
+          statusLabel: done ? 'Done' : active ? 'Active' : 'Upcoming',
+          dotBg: done ? c : 'transparent', dotBorder: done ? c : active ? c : 'rgba(255,255,255,0.18)',
+          dotMark: done ? '✓' : '', dotInner: active ? c : 'transparent',
+          chipColor: done ? c : active ? c : '#71717a', chipBg: done ? this.softFor(g) : active ? this.softFor(g) : 'rgba(255,255,255,0.05)',
+          titleColor: m.status === 'locked' ? '#a1a1aa' : '#f4f4f5',
+        };
+      }),
+      history: g.history.map((v, i) => ({ barH: Math.max(5, Math.round(v * 0.5)), color: this.colorFor(g), op: i === g.history.length - 1 ? '1' : '0.45' })),
+      tasks: s.tasks.filter(t => t.goalId === g.id).sort((a, b) => (a.dayIndex - b.dayIndex) || ((a.start ?? 9999) - (b.start ?? 9999))).map(map),
+      onReview: () => this.showToast('Progress agent reviewing your week… (stub)'),
+      onAdjust: () => this.showToast('Opening roadmap adjustment… (stub)'),
+    } : null;
+
+    const ng = s.ng;
+    const canStart = ng.goal.trim().length > 3;
+    const wiz = {
+      s0: ng.step === 0, s1: ng.step === 1, s2: ng.step === 2,
+      goal: ng.goal, onGoal: (e) => this.ngSet({ goal: e.target.value }), onStart: () => this.ngStart(),
+      startBg: canStart ? '#6d56f0' : 'rgba(109,86,240,0.4)', startCursor: canStart ? 'pointer' : 'not-allowed',
+      question: ng.questions[ng.qIndex] || '', qNum: ng.qIndex + 1, qTotal: ng.questions.length || 3,
+      answer: ng.answers[ng.qIndex] || '', onAnswer: (e) => this.ngSetAnswer(e.target.value),
+      onNext: () => this.ngAnswer(), onSkip: () => this.ngAnswer(),
+      nextLabel: ng.qIndex === (ng.questions.length - 1) ? 'Build roadmap' : 'Continue',
+      dot0Bg: '#6d56f0', dot1Bg: ng.step >= 1 ? '#6d56f0' : '#27272a', dot2Bg: ng.step >= 2 ? '#6d56f0' : '#27272a',
+    };
+
+    const order = [1, 2, 3, 4, 5, 6, 0];
+    const timeOptions = []; for (let m = 300; m <= 1380; m += 30) timeOptions.push({ value: m, label: this.fmt(m) });
+    const avail = order.map(dow => {
+      const a = s.availability.find(x => x.dayOfWeek === dow);
+      return {
+        dow, name: WD[dow], on: a.on, start: a.start, end: a.end,
+        onToggle: () => this.toggleAvail(dow), onStart: (e) => this.setAvail(dow, 'start', e.target.value), onEnd: (e) => this.setAvail(dow, 'end', e.target.value),
+        trackBg: a.on ? '#6d56f0' : 'rgba(255,255,255,0.12)', knobLeft: a.on ? '21px' : '3px',
+        rowOpacity: a.on ? '1' : '0.4', nameColor: a.on ? '#f4f4f5' : '#71717a',
+        statusLabel: a.on ? '' : 'Day off', statusColor: '#71717a',
+      };
+    });
+
+    const route = s.route;
+    const navBg = (r) => route === r ? 'rgba(255,255,255,0.07)' : 'transparent';
+    const navColor = (r) => route === r ? '#f4f4f5' : '#a1a1aa';
+
+    return {
+      showAuth: !s.authed, showApp: s.authed,
+      isSignup: s.authMode === 'signup',
+      authTitle: s.authMode === 'login' ? 'Welcome back' : 'Create your account',
+      authCta: s.authMode === 'login' ? 'Sign in' : 'Create account',
+      loginTabBg: s.authMode === 'login' ? '#1c1c24' : 'transparent', loginTabColor: s.authMode === 'login' ? '#f4f4f5' : '#71717a',
+      signupTabBg: s.authMode === 'signup' ? '#1c1c24' : 'transparent', signupTabColor: s.authMode === 'signup' ? '#f4f4f5' : '#71717a',
+      email: s.email, password: s.password, name: s.name,
+      onEmail: (e) => this.setState({ email: e.target.value }), onPassword: (e) => this.setState({ password: e.target.value }), onName: (e) => this.setState({ name: e.target.value }),
+      onSignIn: () => this.signIn(), toLogin: () => this.setState({ authMode: 'login' }), toSignup: () => this.setState({ authMode: 'signup' }), onSignOut: () => this.signOut(),
+
+      routeDashboard: route === 'dashboard', routeSchedule: route === 'schedule', routeGoal: route === 'goal', routeNewGoal: route === 'newgoal', routeAvailability: route === 'availability',
+      navDash: () => this.navigate('dashboard'), navSched: () => this.navigate('schedule'), navAvail: () => this.navigate('availability'), navNew: () => this.navigate('newgoal'),
+      navDashBg: navBg('dashboard'), navDashColor: navColor('dashboard'),
+      navSchedBg: navBg('schedule'), navSchedColor: navColor('schedule'),
+      navAvailBg: navBg('availability'), navAvailColor: navColor('availability'),
+      goalsNav: s.goals.map(gg => ({ id: gg.id, title: gg.title, color: this.colorFor(gg), onOpen: () => this.openGoal(gg.id), activeBg: (route === 'goal' && s.selectedGoalId === gg.id) ? 'rgba(255,255,255,0.05)' : 'transparent' })),
+
+      greeting, dateLabel,
+      todayTasks, todayDone, todayTotal: todayTasks.length,
+      weekPct, streak, activeGoals: s.goals.filter(gg => gg.status === 'active').length,
+      goals,
+      weekDays, weekLabel, legend, weekEmpty,
+      onPrevWeek: () => this.setWeek(s.weekOffset - 1), onNextWeek: () => this.setWeek(s.weekOffset + 1), onToday: () => this.setWeek(0),
+      onRegenerate: () => this.showToast('Re-running the Scheduler for this week… (stub)'),
+      detail, wiz, avail, timeOptions,
+      onSaveAvail: () => this.showToast('Availability saved'),
+      toast: s.toast, hasToast: !!s.toast,
+    };
+  }
+}
+</script>
+</body>
+</html>

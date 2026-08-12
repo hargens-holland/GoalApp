@@ -8,68 +8,106 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  password  String
-  name      String?
-  plans     Plan[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id           String         @id @default(cuid())
+  email        String         @unique
+  password     String
+  name         String?
+  goals        Goal[]
+  availability Availability[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
 }
 
-model Plan {
-  id              String           @id @default(cuid())
-  title           String
-  goal            String
-  clarifications  Json             @default("[]")
-  userId          String
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tasks           Task[]
-  weeklySnapshots WeeklySnapshot[]
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+// A goal is the durable top-level objective. The Architect agent turns it into
+// a roadmap of milestones; the Progress agent tracks position; the Scheduler
+// agent lays dated tasks across the week.
+model Goal {
+  id             String            @id @default(cuid())
+  title          String
+  goal           String
+  clarifications Json              @default("[]")
+  status         String            @default("active") // active | paused | done
+  progress       Int               @default(0) // 0-100, maintained by the Progress agent
+  targetDate     DateTime?
+  userId         String
+  user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  milestones     Milestone[]
+  tasks          Task[]
+  snapshots      ProgressSnapshot[]
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
 }
 
+// The durable roadmap structure. Output of the Architect agent.
+model Milestone {
+  id               String   @id @default(cuid())
+  goalId           String
+  goal             Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  title            String
+  description      String?
+  successCriteria  String?
+  order            Int      @default(0)
+  targetWeekOffset Int? // weeks from goal start when this milestone is targeted
+  status           String   @default("locked") // locked | active | done
+  tasks            Task[]
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+// A concrete, dated daily task. Output of the Scheduler agent. Completion is
+// folded onto the task itself since each task is uniquely dated.
 model Task {
-  id          String           @id @default(cuid())
-  title       String
-  description String?
-  planId      String
-  plan        Plan             @relation(fields: [planId], references: [id], onDelete: Cascade)
-  completions TaskCompletion[]
-  weekNumber  Int
-  year        Int
-  order       Int              @default(0)
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-}
-
-model WeeklySnapshot {
-  id          String           @id @default(cuid())
-  planId      String
-  plan        Plan             @relation(fields: [planId], references: [id], onDelete: Cascade)
-  weekNumber  Int
-  year        Int
-  summary     String?
-  completions TaskCompletion[]
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-
-  @@unique([planId, weekNumber, year])
-}
-
-model TaskCompletion {
-  id               String         @id @default(cuid())
-  taskId           String
-  task             Task           @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  weeklySnapshotId String
-  weeklySnapshot   WeeklySnapshot @relation(fields: [weeklySnapshotId], references: [id], onDelete: Cascade)
-  completed        Boolean        @default(false)
+  id               String     @id @default(cuid())
+  goalId           String
+  goal             Goal       @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  milestoneId      String?
+  milestone        Milestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  title            String
+  description      String?
+  date             DateTime // the day this task is scheduled for
+  estimatedMinutes Int?
+  scheduledStart   DateTime?
+  scheduledEnd     DateTime?
+  status           String     @default("pending") // pending | done | skipped
+  order            Int        @default(0)
+  completed        Boolean    @default(false)
   notes            String?
   metadata         Json?
   completedAt      DateTime?
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
 
-  @@unique([taskId, weeklySnapshotId])
+  @@index([goalId, date])
+}
+
+// Weekly assessment written by the Progress agent.
+model ProgressSnapshot {
+  id                 String   @id @default(cuid())
+  goalId             String
+  goal               Goal     @relation(fields: [goalId], references: [id], onDelete: Cascade)
+  weekNumber         Int
+  year               Int
+  summary            String?
+  focusForWeek       String?
+  currentMilestoneId String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@unique([goalId, weekNumber, year])
+}
+
+// Recurring weekly availability used by the Scheduler. Start simple: one or
+// more work-hour windows per weekday. The googleCalendar impl can later supply
+// the same Block shape without touching callers.
+model Availability {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  dayOfWeek   Int // 0 = Sunday ... 6 = Saturday
+  startMinute Int // minutes from midnight, e.g. 540 = 09:00
+  endMinute   Int // minutes from midnight, e.g. 1020 = 17:00
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId, dayOfWeek])
 }

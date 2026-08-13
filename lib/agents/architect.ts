@@ -1,25 +1,34 @@
-import { callClaude, parseJson, Clarification } from "./shared";
+import { generate, type AgentOutcome } from "./client";
+import {
+  ClarifyingQuestionsSchema,
+  RoadmapSchema,
+  type Clarification,
+  type Roadmap,
+} from "./schemas";
 
 /**
  * ARCHITECT AGENT
- * Job: turn a goal into a durable roadmap of milestones. Runs rarely — at goal
- * creation or an explicit re-plan. It does NOT produce day-to-day tasks; that's
- * the Scheduler's job. Output is the stable structure everything else hangs off.
+ *
+ * Turns a goal into a durable roadmap of milestones. Runs rarely — at goal
+ * creation, or on an explicit re-plan. It deliberately does not produce
+ * day-to-day tasks; that is the Scheduler's job. Its output is the stable
+ * structure everything else hangs off, which is why it is the only agent whose
+ * failure mode is worth a hard schema requirement (see RoadmapSchema).
  */
 
-export interface GeneratedMilestone {
-  title: string;
-  description: string;
-  successCriteria: string;
-  order: number;
-  targetWeekOffset: number; // weeks from goal start
-}
+// ---------------------------------------------------------------------------
+// Deterministic fallbacks
+// ---------------------------------------------------------------------------
 
-export interface Roadmap {
-  milestones: GeneratedMilestone[];
-}
-
-function mockRoadmap(goal: string): Roadmap {
+/**
+ * A generic but coherent four-phase roadmap.
+ *
+ * This is not a test stub — it is the planner that runs in demo mode and
+ * whenever the model is unreachable, so it has to produce something a user
+ * could actually follow. The phases mirror the shape of most self-directed
+ * goals: establish a baseline, build volume, push past the plateau, consolidate.
+ */
+export function fallbackRoadmap(goal: string): Roadmap {
   const label = goal.slice(0, 40);
   return {
     milestones: [
@@ -27,7 +36,8 @@ function mockRoadmap(goal: string): Roadmap {
         title: `Foundations for: ${label}`,
         description:
           "Establish a baseline, gather what you need, and remove obvious blockers.",
-        successCriteria: "You can name your starting point and have what you need to begin.",
+        successCriteria:
+          "You can name your starting point and have what you need to begin.",
         order: 0,
         targetWeekOffset: 0,
       },
@@ -40,7 +50,8 @@ function mockRoadmap(goal: string): Roadmap {
       },
       {
         title: "Push past the plateau",
-        description: "Increase difficulty and address the gaps the Progress agent surfaces.",
+        description:
+          "Increase difficulty and address the gaps the Progress agent surfaces.",
         successCriteria: "A measurable improvement over your baseline.",
         order: 2,
         targetWeekOffset: 6,
@@ -56,74 +67,100 @@ function mockRoadmap(goal: string): Roadmap {
   };
 }
 
+const FALLBACK_QUESTIONS = [
+  "What is your current experience level with this goal?",
+  "How many hours per week can you realistically dedicate to this?",
+  "By when do you want to achieve this goal?",
+];
+
+// ---------------------------------------------------------------------------
+// Agent calls
+// ---------------------------------------------------------------------------
+
+/** Three questions used to personalize the roadmap before it is generated. */
 export async function generateClarifyingQuestions(
   goal: string
-): Promise<string[]> {
-  const text = await callClaude(
-    `A user wants to achieve: "${goal}"\n\nGenerate exactly 3 concise clarifying questions to personalize their roadmap. Return a JSON array of strings only, no markdown. Example: ["Question 1?", "Question 2?", "Question 3?"]`,
-    512
-  );
-  if (!text) {
-    return [
-      "What is your current experience level with this goal?",
-      "How many hours per week can you realistically dedicate to this?",
-      "By when do you want to achieve this goal?",
-    ];
-  }
-  return parseJson<string[]>(text, []);
+): Promise<AgentOutcome<string[]>> {
+  const outcome = await generate({
+    label: "architect.clarify",
+    maxTokens: 512,
+    schema: ClarifyingQuestionsSchema,
+    prompt: `A user wants to achieve this goal: "${goal}"
+
+Write exactly 3 concise clarifying questions whose answers would let you build a
+better, more personal roadmap. Ask about things you cannot infer from the goal
+statement alone — current level, time available, constraints, or deadline.`,
+    fallback: () => ({ questions: FALLBACK_QUESTIONS }),
+  });
+
+  // Unwrap to a bare string[] so callers don't deal with the envelope object.
+  return { ...outcome, data: outcome.data.questions.slice(0, 3) };
 }
 
+/** Build the initial milestone roadmap for a goal. */
 export async function generateRoadmap(
   goal: string,
   clarifications: Clarification[]
-): Promise<Roadmap> {
-  const context = clarifications
-    .map((c) => `Q: ${c.question}\nA: ${c.answer}`)
-    .join("\n\n");
+): Promise<AgentOutcome<Roadmap>> {
+  const context = clarifications.length
+    ? clarifications.map((c) => `Q: ${c.question}\nA: ${c.answer}`).join("\n\n")
+    : "(no additional context provided)";
 
-  const text = await callClaude(
-    `You are a goal-planning architect. Break this goal into a roadmap of 3-6 sequential milestones (phases), not day-to-day tasks.\n\nGoal: "${goal}"\n\nContext:\n${context}\n\nEach milestone needs a title, a short description, a concrete success criteria, an order (0-based), and a targetWeekOffset (whole weeks from the start). Return raw JSON only, no markdown:\n{"milestones":[{"title":"...","description":"...","successCriteria":"...","order":0,"targetWeekOffset":0}]}`,
-    1024
-  );
-  if (!text) return mockRoadmap(goal);
-  const parsed = parseJson<Roadmap>(text, mockRoadmap(goal));
-  return parsed.milestones?.length ? parsed : mockRoadmap(goal);
+  return generate({
+    label: "architect.roadmap",
+    maxTokens: 2048,
+    schema: RoadmapSchema,
+    fallback: () => fallbackRoadmap(goal),
+    prompt: `You are a goal-planning architect. Break this goal into a roadmap of
+3-6 sequential milestones — phases of work, not day-to-day tasks.
+
+Goal: "${goal}"
+
+What the user told us:
+${context}
+
+Each milestone needs a concrete success criteria that can actually be checked,
+and a targetWeekOffset counted in whole weeks from the start of the goal.
+Order them from 0, in the sequence they should be tackled.`,
+  });
 }
 
+/** Revise an existing roadmap in response to a user request. */
 export async function adjustRoadmap(
   goal: string,
   milestones: Array<{ title: string; description: string; order: number }>,
   request: string
-): Promise<Roadmap> {
+): Promise<AgentOutcome<Roadmap>> {
   const current = milestones
     .map((m) => `${m.order}. ${m.title}: ${m.description}`)
     .join("\n");
 
-  const text = await callClaude(
-    `You are a goal-planning architect. Revise this milestone roadmap based on the user's request. Keep it to 3-6 sequential milestones.\n\nGoal: "${goal}"\n\nCurrent roadmap:\n${current}\n\nUser request: "${request}"\n\nReturn raw JSON only:\n{"milestones":[{"title":"...","description":"...","successCriteria":"...","order":0,"targetWeekOffset":0}]}`,
-    1024
-  );
-  if (!text) {
-    return {
+  return generate({
+    label: "architect.adjust",
+    maxTokens: 2048,
+    schema: RoadmapSchema,
+    // If the model can't be reached we keep the roadmap exactly as it was
+    // rather than inventing a new one: silently replacing a user's plan with
+    // generic phases because an API call failed would be worse than no change.
+    fallback: () => ({
       milestones: milestones.map((m) => ({
         title: m.title,
-        description: `${m.description} [Adjusted: ${request}]`,
+        description: m.description,
         successCriteria: "",
         order: m.order,
         targetWeekOffset: m.order * 2,
       })),
-    };
-  }
-  const parsed = parseJson<Roadmap>(text, { milestones: [] });
-  return parsed.milestones?.length
-    ? parsed
-    : {
-        milestones: milestones.map((m) => ({
-          title: m.title,
-          description: m.description,
-          successCriteria: "",
-          order: m.order,
-          targetWeekOffset: m.order * 2,
-        })),
-      };
+    }),
+    prompt: `You are a goal-planning architect. Revise this milestone roadmap to
+reflect the user's request. Keep it to 3-6 sequential milestones.
+
+Goal: "${goal}"
+
+Current roadmap:
+${current}
+
+The user asks: "${request}"
+
+Preserve any milestone the request does not affect, including its wording.`,
+  });
 }

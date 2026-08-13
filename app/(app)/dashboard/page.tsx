@@ -3,8 +3,9 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { getWeekRange, getWeekInfo, toISODate } from "@/lib/agents/shared";
+import { getWeekRange, getWeekInfo, toISODate } from "@/lib/dates";
 import { goalColor } from "@/lib/colors";
+import { isDone } from "@/lib/tasks";
 import { dateLabel, greeting, timeFromISO } from "@/lib/format";
 import DashboardToday, { TodayTask } from "@/components/DashboardToday";
 
@@ -42,7 +43,7 @@ export default async function DashboardPage() {
   // Streak: trailing consecutive past weeks (excluding current) with >=50% completion.
   const allTasks = await prisma.task.findMany({
     where: { goal: { userId: session.user.id } },
-    select: { date: true, completed: true },
+    select: { date: true, status: true },
   });
   const byWeek = new Map<string, { total: number; done: number }>();
   for (const t of allTasks) {
@@ -50,7 +51,7 @@ export default async function DashboardPage() {
     const key = `${year}-${String(wn).padStart(2, "0")}`;
     const cur = byWeek.get(key) ?? { total: 0, done: 0 };
     cur.total++;
-    if (t.completed) cur.done++;
+    if (isDone(t.status)) cur.done++;
     byWeek.set(key, cur);
   }
   const currentKey = `${getWeekInfo().year}-${String(weekNumber).padStart(2, "0")}`;
@@ -64,7 +65,7 @@ export default async function DashboardPage() {
 
   // This-week completion across all goals.
   const weekTasks = goals.flatMap((g) => g.tasks);
-  const weekDone = weekTasks.filter((t) => t.completed).length;
+  const weekDone = weekTasks.filter((t) => isDone(t.status)).length;
   const weekPct = weekTasks.length ? Math.round((weekDone / weekTasks.length) * 100) : 0;
   const activeGoals = goals.filter((g) => g.status === "active").length;
 
@@ -77,7 +78,7 @@ export default async function DashboardPage() {
       title: t.title,
       desc: t.description ?? "",
       time: timeFromISO(t.scheduledStart?.toISOString() ?? null),
-      completed: t.completed,
+      completed: isDone(t.status),
       notes: t.notes ?? "",
       goalTitle: g.title,
       color: goalColor(g.id),

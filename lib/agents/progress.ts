@@ -1,12 +1,15 @@
-import { callClaude, parseJson } from "./shared";
+import { generate, type AgentOutcome } from "./client";
+import { ProgressAssessmentSchema, type ProgressAssessment } from "./schemas";
 
 /**
  * PROGRESS AGENT
- * Job: figure out WHERE the user is in their roadmap. Runs weekly. It reads the
- * roadmap plus the past period's task completions/notes and returns an
- * assessment — it deliberately does NOT write tasks (that's the Scheduler). This
- * is the "where am I in the plan" agent, kept separate so evaluation and
- * task-writing never blur together.
+ *
+ * Works out WHERE the user is in their roadmap. Runs weekly. It reads the
+ * roadmap plus the last period's task completions and notes, and returns an
+ * assessment — it deliberately does not write tasks, which is the Scheduler's
+ * job. Keeping evaluation and task-writing in separate agents means a bad
+ * assessment can never silently rewrite someone's week, and each can be
+ * evaluated on its own.
  */
 
 export interface MilestoneInput {
@@ -23,29 +26,26 @@ export interface CompletionInput {
   notes: string | null;
 }
 
-export interface ProgressAssessment {
-  currentMilestoneId: string | null;
-  progressPercent: number; // 0-100 across the whole goal
-  summary: string;
-  focusForWeek: string;
-  // milestone ids the agent now considers done
-  completedMilestoneIds: string[];
-}
-
-function mockAssessment(
+/**
+ * Estimate progress arithmetically from completion ratio.
+ *
+ * Used in demo mode and whenever the model is unavailable. It cannot read the
+ * user's notes the way the model can, but it advances through the roadmap in
+ * proportion to how much of the recent work actually got done, which is a
+ * defensible approximation.
+ */
+export function fallbackAssessment(
   milestones: MilestoneInput[],
   completions: CompletionInput[]
 ): ProgressAssessment {
   const doneCount = completions.filter((c) => c.completed).length;
   const total = completions.length || 1;
   const ratio = doneCount / total;
-  // Advance to the first not-done milestone, biased by completion ratio.
+
   const ordered = [...milestones].sort((a, b) => a.order - b.order);
-  const idx = Math.min(
-    ordered.length - 1,
-    Math.floor(ratio * ordered.length)
-  );
-  const current = ordered[idx] || null;
+  const idx = Math.min(ordered.length - 1, Math.floor(ratio * ordered.length));
+  const current = ordered[idx] ?? null;
+
   return {
     currentMilestoneId: current?.id ?? null,
     progressPercent: Math.round(
@@ -59,12 +59,39 @@ function mockAssessment(
   };
 }
 
+/**
+ * Clamp and tidy a raw assessment.
+ *
+ * The schema guarantees `progressPercent` is a number but not that it is a
+ * sensible one. A model that returns 103 has still produced a useful
+ * assessment, so this clamps rather than rejecting the whole response.
+ * Milestone ids are filtered against the ones actually passed in, so a
+ * hallucinated id can never be written to the database.
+ */
+export function normalizeAssessment(
+  assessment: ProgressAssessment,
+  milestones: MilestoneInput[]
+): ProgressAssessment {
+  const knownIds = new Set(milestones.map((m) => m.id));
+  return {
+    ...assessment,
+    progressPercent: Math.max(0, Math.min(100, Math.round(assessment.progressPercent))),
+    currentMilestoneId:
+      assessment.currentMilestoneId && knownIds.has(assessment.currentMilestoneId)
+        ? assessment.currentMilestoneId
+        : null,
+    completedMilestoneIds: assessment.completedMilestoneIds.filter((id) =>
+      knownIds.has(id)
+    ),
+  };
+}
+
 export async function assessProgress(
   goal: string,
   milestones: MilestoneInput[],
   completions: CompletionInput[]
-): Promise<ProgressAssessment> {
-  const roadmap = milestones
+): Promise<AgentOutcome<ProgressAssessment>> {
+  const roadmap = [...milestones]
     .sort((a, b) => a.order - b.order)
     .map(
       (m) =>
@@ -83,19 +110,27 @@ export async function assessProgress(
     )
     .join("\n");
 
-  const text = await callClaude(
-    `You are a progress-tracking agent. Given a goal, its milestone roadmap, and the last period's task results, assess where the user currently is. Do NOT invent tasks.\n\nGoal: "${goal}"\n\nRoadmap:\n${roadmap || "none"}\n\nLast period's tasks:\n${recent || "none"}\n\nReturn raw JSON only:\n{"currentMilestoneId":"<the id of the milestone they are actively working on, or null>","progressPercent":<0-100 overall>,"summary":"<2 sentences on where they stand>","focusForWeek":"<one clear focus for the coming week>","completedMilestoneIds":["<ids of milestones now fully met>"]}`,
-    768
-  );
-  if (!text) return mockAssessment(milestones, completions);
-  const parsed = parseJson<ProgressAssessment | null>(text, null);
-  return parsed && typeof parsed.progressPercent === "number"
-    ? {
-        currentMilestoneId: parsed.currentMilestoneId ?? null,
-        progressPercent: Math.max(0, Math.min(100, parsed.progressPercent)),
-        summary: parsed.summary ?? "",
-        focusForWeek: parsed.focusForWeek ?? "",
-        completedMilestoneIds: parsed.completedMilestoneIds ?? [],
-      }
-    : mockAssessment(milestones, completions);
+  const outcome = await generate({
+    label: "progress.assess",
+    maxTokens: 1024,
+    schema: ProgressAssessmentSchema,
+    fallback: () => fallbackAssessment(milestones, completions),
+    prompt: `You are a progress-tracking agent. Given a goal, its milestone
+roadmap, and the results of the last period's tasks, assess where the user
+currently stands. Do not invent tasks — that is another agent's job.
+
+Goal: "${goal}"
+
+Roadmap:
+${roadmap || "none"}
+
+Last period's tasks:
+${recent || "none"}
+
+Use the exact milestone ids shown above. Set currentMilestoneId to the milestone
+they are actively working on, or null if none applies. Base the assessment on
+what was actually completed, and pay attention to any notes the user left.`,
+  });
+
+  return { ...outcome, data: normalizeAssessment(outcome.data, milestones) };
 }

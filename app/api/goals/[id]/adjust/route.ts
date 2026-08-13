@@ -3,8 +3,9 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { adjustRoadmap } from "@/lib/agents/architect";
-import { getWeekRange } from "@/lib/agents/shared";
-import { runScheduler } from "@/lib/planning";
+import { getWeekRange } from "@/lib/dates";
+import { serializeGoalTasks } from "@/lib/tasks";
+import { runScheduler } from "@/lib/scheduling";
 
 /**
  * The "editor". scope="roadmap" → Architect revises the milestones, then the
@@ -37,7 +38,7 @@ export async function POST(
     if (!req?.trim()) {
       return NextResponse.json({ error: "request is required" }, { status: 400 });
     }
-    const revised = await adjustRoadmap(
+    const { data: revised } = await adjustRoadmap(
       goal.goal,
       goal.milestones.map((m) => ({ title: m.title, description: m.description ?? "", order: m.order })),
       req
@@ -73,5 +74,5 @@ export async function POST(
       tasks: { where: { date: { gte: start, lte: end } }, orderBy: [{ date: "asc" }, { order: "asc" }] },
     },
   });
-  return NextResponse.json(updated);
+  return NextResponse.json(updated ? serializeGoalTasks(updated) : updated);
 }

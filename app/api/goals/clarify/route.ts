@@ -14,6 +14,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "goal is required" }, { status: 400 });
   }
 
-  const questions = await generateClarifyingQuestions(goal);
-  return NextResponse.json({ questions });
+  const { data: questions, source } = await generateClarifyingQuestions(goal);
+  return NextResponse.json({ questions, source });
 }

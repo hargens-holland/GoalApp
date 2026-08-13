@@ -3,8 +3,9 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { redirect, notFound } from "next/navigation";
 import Link from "next/link";
-import { getWeekRange, getWeekInfo, toISODate } from "@/lib/agents/shared";
+import { getWeekRange, getWeekInfo, toISODate } from "@/lib/dates";
 import { goalColor, goalSoft } from "@/lib/colors";
+import { isDone } from "@/lib/tasks";
 import { timeFromISO } from "@/lib/format";
 import GoalDetailActions from "@/components/GoalDetailActions";
 import CompactTaskList, { CompactTask } from "@/components/CompactTaskList";
@@ -38,7 +39,7 @@ export default async function GoalDetailPage({ params }: { params: { id: string 
   // Weekly history (last 8 ISO weeks) from this goal's task completion.
   const allTasks = await prisma.task.findMany({
     where: { goalId: goal.id },
-    select: { date: true, completed: true },
+    select: { date: true, status: true },
   });
   const rateByWeek = new Map<string, { total: number; done: number }>();
   for (const t of allTasks) {
@@ -46,7 +47,7 @@ export default async function GoalDetailPage({ params }: { params: { id: string 
     const key = `${year}-${String(weekNumber).padStart(2, "0")}`;
     const c = rateByWeek.get(key) ?? { total: 0, done: 0 };
     c.total++;
-    if (t.completed) c.done++;
+    if (isDone(t.status)) c.done++;
     rateByWeek.set(key, c);
   }
   const history: number[] = [];
@@ -64,7 +65,7 @@ export default async function GoalDetailPage({ params }: { params: { id: string 
     id: t.id,
     title: t.title,
     time: timeFromISO(t.scheduledStart?.toISOString() ?? null),
-    completed: t.completed,
+    completed: isDone(t.status),
     color,
   }));
 

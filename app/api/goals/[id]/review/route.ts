@@ -3,7 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { assessProgress } from "@/lib/agents/progress";
-import { getWeekInfo } from "@/lib/agents/shared";
+import { getWeekInfo } from "@/lib/dates";
+import { isDone } from "@/lib/tasks";
 
 /**
  * PROGRESS agent endpoint. Assesses where the user is in the roadmap based on
@@ -33,10 +34,10 @@ export async function POST(
   since.setUTCDate(since.getUTCDate() - 14);
   const recent = await prisma.task.findMany({
     where: { goalId: goal.id, date: { gte: since } },
-    select: { title: true, completed: true, notes: true },
+    select: { title: true, status: true, notes: true },
   });
 
-  const assessment = await assessProgress(
+  const { data: assessment, source } = await assessProgress(
     goal.goal,
     goal.milestones.map((m) => ({
       id: m.id,
@@ -45,7 +46,7 @@ export async function POST(
       order: m.order,
       status: m.status,
     })),
-    recent.map((t) => ({ title: t.title, completed: t.completed, notes: t.notes }))
+    recent.map((t) => ({ title: t.title, completed: isDone(t.status), notes: t.notes }))
   );
 
   // Apply milestone statuses: completed → done, current → active, rest → locked.
@@ -90,5 +91,5 @@ export async function POST(
     },
   });
 
-  return NextResponse.json({ assessment, snapshot });
+  return NextResponse.json({ assessment, snapshot, source });
 }

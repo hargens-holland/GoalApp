@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getWeekRange } from "@/lib/agents/shared";
-import { runScheduler } from "@/lib/planning";
+import { getWeekRange } from "@/lib/dates";
+import { serializeTask } from "@/lib/tasks";
+import { runScheduler } from "@/lib/scheduling";
 
 function rangeForOffset(weekOffset: number) {
   const base = new Date();
@@ -31,7 +32,8 @@ export async function GET(request: Request) {
   return NextResponse.json({
     start: start.toISOString(),
     end: end.toISOString(),
-    tasks,
+    // `completed` is derived from status on the way out — see lib/tasks.ts.
+    tasks: tasks.map(serializeTask),
   });
 }
 

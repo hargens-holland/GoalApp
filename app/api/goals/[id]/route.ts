@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getWeekRange } from "@/lib/agents/shared";
+import { getWeekRange } from "@/lib/dates";
+import { serializeGoalTasks } from "@/lib/tasks";
 
 async function ownedGoal(userId: string, id: string) {
   const goal = await prisma.goal.findUnique({ where: { id } });
@@ -30,7 +31,7 @@ export async function GET(
   if (!goal || goal.userId !== session.user.id) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  return NextResponse.json(goal);
+  return NextResponse.json(serializeGoalTasks(goal));
 }
 
 export async function PUT(

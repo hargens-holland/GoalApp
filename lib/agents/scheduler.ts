@@ -1,13 +1,21 @@
-import { callClaude, parseJson } from "./shared";
+import { generate, type AgentOutcome } from "./client";
+import { ScheduleSchema, type GeneratedDailyTask, type Schedule } from "./schemas";
 
 /**
  * SCHEDULER AGENT
- * Job: turn the current focus of ALL active goals into concrete, dated daily
- * tasks for a date range, balanced so no day is overloaded and respecting how
- * much time is available each day. Runs daily/weekly, and is ALSO the "editor":
- * adding a goal or making an adjustment just re-runs this across the affected
- * days. It picks which day a task lands on; time-of-day slotting is done later
- * by lib/scheduling (placeTasks).
+ *
+ * Turns the current focus of ALL active goals into concrete, dated daily tasks
+ * across a date range, balanced so no day is overloaded and respecting how much
+ * time is actually available each day.
+ *
+ * It is also the "editor" of the system: adding a goal, or asking for an
+ * adjustment, re-runs this across the affected days rather than patching
+ * individual tasks. That is what makes regeneration adaptive — the whole week
+ * is re-laid-out against current state instead of accumulating edits.
+ *
+ * It decides which *day* a task lands on. Time-of-day slotting is a separate,
+ * deterministic step in lib/scheduling (placeTasks), because packing tasks into
+ * free blocks is exact arithmetic that a model should not be doing.
  */
 
 export interface SchedulerGoalInput {
@@ -19,63 +27,124 @@ export interface SchedulerGoalInput {
 }
 
 export interface DayCapacity {
-  date: string; // YYYY-MM-DD
+  /** YYYY-MM-DD */
+  date: string;
   availableMinutes: number;
 }
 
 export interface ExistingTaskInput {
   goalId: string;
   title: string;
-  date: string; // YYYY-MM-DD
+  /** YYYY-MM-DD */
+  date: string;
 }
 
-export interface GeneratedDailyTask {
-  goalId: string;
-  milestoneId: string | null;
-  title: string;
-  description: string;
-  date: string; // YYYY-MM-DD
-  estimatedMinutes: number;
-}
-
-export interface Schedule {
-  tasks: GeneratedDailyTask[];
-}
-
-/** Round-robin goals across days that have capacity. */
-function mockSchedule(
+/**
+ * Round-robin each goal's work across the days that have capacity.
+ *
+ * Used in demo mode and on model failure. Simple by design: roughly three
+ * touchpoints per goal, spread evenly so no single day absorbs everything.
+ *
+ * Task titles are built from the goal's current milestone rather than the goal
+ * itself, because the milestone is the more specific thing — "Clean chord
+ * transitions" is actionable in a way "Learn fingerstyle guitar" is not. This
+ * matters more than it looks: the public demo runs in this mode permanently, so
+ * regenerating a week there has to produce something a reader finds plausible.
+ * It does not try to imitate model output — a deterministic planner cannot
+ * invent domain-specific work, and pretending otherwise would be dishonest.
+ */
+export function fallbackSchedule(
   goals: SchedulerGoalInput[],
   days: DayCapacity[]
 ): Schedule {
   const tasks: GeneratedDailyTask[] = [];
   const openDays = days.filter((d) => d.availableMinutes >= 30);
   if (!openDays.length || !goals.length) return { tasks };
-  let di = 0;
+
+  /** Vary the framing so a week doesn't read as three identical rows. */
+  const SESSION_FRAMINGS = [
+    { prefix: "Focused session", minutes: 60 },
+    { prefix: "Practice block", minutes: 45 },
+    { prefix: "Review & consolidate", minutes: 30 },
+  ];
+
+  let dayIndex = 0;
   for (const goal of goals) {
-    // ~3 touchpoints per goal across the range
-    for (let n = 0; n < 3; n++) {
-      const day = openDays[di % openDays.length];
-      di++;
+    const subject = goal.currentMilestoneTitle?.trim() || goal.title;
+
+    SESSION_FRAMINGS.forEach((framing, n) => {
+      const day = openDays[dayIndex % openDays.length];
+      dayIndex++;
       tasks.push({
         goalId: goal.id,
         milestoneId: goal.currentMilestoneId,
-        title: `${goal.title}: session ${n + 1}`,
-        description: goal.focusForWeek || `Work toward "${goal.title}".`,
+        title: `${framing.prefix}: ${subject}`,
+        description:
+          goal.focusForWeek ||
+          `Make progress on "${subject}" toward ${goal.title}.`,
         date: day.date,
-        estimatedMinutes: 45,
+        estimatedMinutes: Math.min(
+          framing.minutes,
+          // Never propose a session longer than the day can hold.
+          Math.max(30, day.availableMinutes)
+        ),
       });
-    }
+    });
   }
   return { tasks };
+}
+
+/**
+ * Discard tasks the model produced that reference something real.
+ *
+ * The schema guarantees each task is *shaped* correctly; it cannot guarantee
+ * the ids and dates are ones we asked about. Without this, a hallucinated
+ * goalId would violate a foreign key at insert time, and an out-of-range date
+ * would silently write a task into a week the user wasn't looking at. This is
+ * the semantic half of validation, and it runs on fallback output too so both
+ * paths get the same guarantees.
+ */
+export function keepValidTasks(
+  tasks: GeneratedDailyTask[],
+  goals: SchedulerGoalInput[],
+  days: DayCapacity[]
+): GeneratedDailyTask[] {
+  const goalIds = new Set(goals.map((g) => g.id));
+  const dayDates = new Set(days.map((d) => d.date));
+  // A milestone id must belong to the goal the task is attached to, otherwise
+  // it is dropped rather than creating a cross-goal reference.
+  const milestoneByGoal = new Map(
+    goals.map((g) => [g.id, g.currentMilestoneId] as const)
+  );
+
+  return tasks
+    .filter((t) => goalIds.has(t.goalId) && dayDates.has(t.date))
+    .map((t) => ({
+      ...t,
+      milestoneId:
+        t.milestoneId && milestoneByGoal.get(t.goalId) === t.milestoneId
+          ? t.milestoneId
+          : (milestoneByGoal.get(t.goalId) ?? null),
+      // Guard against zero/negative durations, which would make the time-slot
+      // packer place a task with no width.
+      estimatedMinutes:
+        Number.isFinite(t.estimatedMinutes) && t.estimatedMinutes > 0
+          ? Math.min(t.estimatedMinutes, 8 * 60)
+          : 30,
+    }));
 }
 
 export async function scheduleTasks(input: {
   goals: SchedulerGoalInput[];
   days: DayCapacity[];
   existingTasks: ExistingTaskInput[];
-}): Promise<Schedule> {
+}): Promise<AgentOutcome<Schedule>> {
   const { goals, days, existingTasks } = input;
-  if (!goals.length || !days.length) return { tasks: [] };
+
+  // Nothing to schedule — don't spend a request finding that out.
+  if (!goals.length || !days.length) {
+    return { data: { tasks: [] }, source: "fallback", reason: "demo_mode", attempts: 0 };
+  }
 
   const goalsText = goals
     .map(
@@ -96,19 +165,47 @@ export async function scheduleTasks(input: {
     ? existingTasks.map((t) => `${t.date} — ${t.title}`).join("\n")
     : "none";
 
-  const text = await callClaude(
-    `You are a scheduling agent. Lay out concrete daily tasks for the user's active goals across the given days. Balance work across goals and days; never exceed a day's available minutes (sum of task estimates per day must fit). Build on the focus for each goal. Do not duplicate existing tasks.\n\nActive goals:\n${goalsText}\n\nDays and capacity:\n${daysText}\n\nExisting tasks (avoid duplicating):\n${existingText}\n\nReturn raw JSON only. Use the exact goalId and milestoneId from above:\n{"tasks":[{"goalId":"...","milestoneId":"... or null","title":"...","description":"...","date":"YYYY-MM-DD","estimatedMinutes":45}]}`,
-    2048
-  );
-  if (!text) return mockSchedule(goals, days);
-  const parsed = parseJson<Schedule>(text, { tasks: [] });
-  if (!parsed.tasks?.length) return mockSchedule(goals, days);
+  const outcome = await generate({
+    label: "scheduler.week",
+    // Sized for a full week across several goals. Generous because a truncated
+    // schedule is discarded entirely, which is more expensive than the tokens.
+    maxTokens: 4096,
+    schema: ScheduleSchema,
+    fallback: () => fallbackSchedule(goals, days),
+    prompt: `You are a scheduling agent. Lay out concrete daily tasks for the
+user's active goals across the given days.
 
-  // Guard: keep only tasks that reference a real goal and a valid in-range day.
-  const goalIds = new Set(goals.map((g) => g.id));
-  const dayDates = new Set(days.map((d) => d.date));
-  const tasks = parsed.tasks.filter(
-    (t) => goalIds.has(t.goalId) && dayDates.has(t.date)
-  );
-  return { tasks: tasks.length ? tasks : mockSchedule(goals, days).tasks };
+Active goals:
+${goalsText}
+
+Days and available capacity:
+${daysText}
+
+Tasks already scheduled in this range — do not duplicate these:
+${existingText}
+
+Rules:
+- Use the exact goalId and milestoneId values shown above.
+- Every date must be one of the days listed above.
+- The task estimates on any single day must fit inside that day's available
+  minutes. Skip days with no availability entirely.
+- Balance work across goals rather than finishing one before starting another.
+- Build on each goal's stated focus. Make each task specific enough to act on
+  without further planning.`,
+  });
+
+  const tasks = keepValidTasks(outcome.data.tasks, goals, days);
+
+  // Everything the model produced was unusable — fall back rather than
+  // writing an empty week over a user's existing plan.
+  if (!tasks.length && outcome.source === "llm") {
+    return {
+      data: { tasks: keepValidTasks(fallbackSchedule(goals, days).tasks, goals, days) },
+      source: "fallback",
+      reason: "invalid_output",
+      attempts: outcome.attempts,
+    };
+  }
+
+  return { ...outcome, data: { tasks } };
 }

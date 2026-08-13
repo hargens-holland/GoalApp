@@ -1,0 +1,108 @@
+import { z } from "zod";
+
+/**
+ * Output contracts for the three planning agents.
+ *
+ * These schemas do double duty:
+ *
+ *  1. They are compiled to JSON Schema and sent to the Anthropic API as
+ *     `output_config.format`, so the model is *constrained* to emit conforming
+ *     JSON rather than merely asked to. This eliminates the entire class of
+ *     "model wrapped its JSON in prose or a code fence" failures.
+ *
+ *  2. They validate the response client-side after parsing. The API guarantees
+ *     structural conformance, but not that the values make sense — so the
+ *     agents layer a second, semantic pass on top (e.g. discarding scheduled
+ *     tasks that reference a goal the user doesn't own).
+ *
+ * A note on constraints: the structured-output JSON Schema subset does not
+ * support numeric bounds (`minimum`/`maximum`) or array-length bounds. The
+ * TypeScript SDK strips those from the schema it sends and enforces them
+ * client-side instead, so `.min()` here still protects us — it just fails at
+ * parse time rather than generation time. Bounds are used only for invariants
+ * genuinely worth rejecting a whole response over; softer expectations (an
+ * ideal milestone count, a percentage in range) are stated in the prompt and
+ * normalized in code, because discarding an otherwise-good plan over an
+ * off-by-one is a worse outcome than clamping it.
+ */
+
+/** A clarifying question and the user's answer, gathered before planning. */
+export interface Clarification {
+  question: string;
+  answer: string;
+}
+
+// ---------------------------------------------------------------------------
+// Architect
+// ---------------------------------------------------------------------------
+
+export const ClarifyingQuestionsSchema = z.object({
+  questions: z
+    .array(z.string())
+    .min(1)
+    .describe("Concise clarifying questions to personalize the roadmap."),
+});
+export type ClarifyingQuestions = z.infer<typeof ClarifyingQuestionsSchema>;
+
+export const MilestoneSchema = z.object({
+  title: z.string().describe("Short name for this phase of the goal."),
+  description: z.string().describe("What the user actually does in this phase."),
+  successCriteria: z
+    .string()
+    .describe("A concrete, checkable condition that means this phase is done."),
+  order: z.number().int().describe("0-based position in the sequence."),
+  targetWeekOffset: z
+    .number()
+    .int()
+    .describe("Whole weeks from the goal's start when this milestone is targeted."),
+});
+export type GeneratedMilestone = z.infer<typeof MilestoneSchema>;
+
+export const RoadmapSchema = z.object({
+  // A roadmap with zero milestones is not a degraded result, it's a useless
+  // one — nothing downstream (progress assessment, scheduling) can run without
+  // at least one. This is the one hard invariant worth failing the response for.
+  milestones: z.array(MilestoneSchema).min(1),
+});
+export type Roadmap = z.infer<typeof RoadmapSchema>;
+
+// ---------------------------------------------------------------------------
+// Progress
+// ---------------------------------------------------------------------------
+
+export const ProgressAssessmentSchema = z.object({
+  currentMilestoneId: z
+    .string()
+    .nullable()
+    .describe("Id of the milestone being actively worked, or null."),
+  // Deliberately unbounded here and clamped to 0-100 after parsing: a model
+  // that returns 103 has still produced a useful assessment.
+  progressPercent: z.number().describe("Overall completion across the goal, 0-100."),
+  summary: z.string().describe("Two sentences on where the user stands."),
+  focusForWeek: z.string().describe("One clear focus for the coming week."),
+  completedMilestoneIds: z
+    .array(z.string())
+    .describe("Ids of milestones now fully met."),
+});
+export type ProgressAssessment = z.infer<typeof ProgressAssessmentSchema>;
+
+// ---------------------------------------------------------------------------
+// Scheduler
+// ---------------------------------------------------------------------------
+
+export const DailyTaskSchema = z.object({
+  goalId: z.string().describe("Must be one of the goal ids supplied in the prompt."),
+  milestoneId: z.string().nullable(),
+  title: z.string(),
+  description: z.string(),
+  date: z.string().describe("The day for this task, as YYYY-MM-DD."),
+  estimatedMinutes: z.number().int().describe("Expected working minutes."),
+});
+export type GeneratedDailyTask = z.infer<typeof DailyTaskSchema>;
+
+export const ScheduleSchema = z.object({
+  // An empty schedule is legitimate — a week with no availability should
+  // produce no tasks — so there is no minimum here.
+  tasks: z.array(DailyTaskSchema),
+});
+export type Schedule = z.infer<typeof ScheduleSchema>;

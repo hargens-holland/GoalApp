@@ -1,26 +1,16 @@
-.PHONY: db-up db-down db-reset db-migrate db-seed db-studio dev build setup install
+.PHONY: setup dev build test typecheck db-up db-down db-reset db-migrate db-seed db-studio
 
-db-up:
+## Install deps, start Postgres, apply migrations, seed the demo account.
+setup:
+	npm install
 	docker compose up -d
-
-db-down:
-	docker compose down
-
-db-reset:
-	docker compose down -v
-	docker compose up -d
-	sleep 3
-	npx prisma migrate dev --name init
-	npx prisma db seed
-
-db-migrate:
-	npx prisma migrate dev
-
-db-seed:
-	npx prisma db seed
-
-db-studio:
-	npx prisma studio
+	@echo "waiting for Postgres to accept connections..."
+	@sleep 3
+	npx prisma migrate deploy
+	npx tsx prisma/seed.ts
+	@echo ""
+	@echo "Ready. Run 'make dev' and open http://localhost:3000"
+	@echo "Sign in with the 'Explore the demo' button, or demo@example.com / demo123"
 
 dev:
 	npm run dev
@@ -28,15 +18,32 @@ dev:
 build:
 	npm run build
 
-install:
-	npm install
+test:
+	npm test
 
-setup: install
+typecheck:
+	npm run typecheck
+
+db-up:
 	docker compose up -d
-	sleep 3
-	npx prisma migrate dev --name init
-	npx prisma db seed
-	@echo ""
-	@echo "✅ Goal Planner is ready!"
-	@echo "Run 'make dev' to start the app at http://localhost:3000"
-	@echo "Demo login: demo@example.com / demo123"
+
+db-down:
+	docker compose down
+
+## Wipe the database and rebuild it from scratch.
+db-reset:
+	docker compose down -v
+	docker compose up -d
+	@sleep 3
+	npx prisma migrate deploy
+	npx tsx prisma/seed.ts
+
+## Create a new migration after editing prisma/schema.prisma.
+db-migrate:
+	npx prisma migrate dev
+
+db-seed:
+	npx tsx prisma/seed.ts
+
+db-studio:
+	npx prisma studio

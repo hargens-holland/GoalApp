@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: Typecheck & test
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      # `postinstall` runs `prisma generate`, which the type checker needs for
+      # the generated client types. DATABASE_URL is only parsed for its scheme
+      # at generate time — no database is contacted anywhere in this job.
+      - name: Install dependencies
+        run: npm ci
+        env:
+          DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+          DIRECT_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # The suite is pure unit tests over the planning logic: no database, and
+      # no network. Demo mode is forced so a stray API key in the environment
+      # could never cause CI to make a billable call.
+      - name: Test
+        run: npm test
+        env:
+          DEMO_MODE: "true"
+
+  build:
+    name: Production build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+          DIRECT_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+
+      # Catches build-time breakage the type checker misses, such as a server
+      # component importing something that only exists on the client.
+      - name: Build
+        run: npm run build
+        env:
+          DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+          DIRECT_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+          NEXTAUTH_SECRET: build-time-placeholder-not-a-real-secret
+          NEXTAUTH_URL: http://localhost:3000
+          DEMO_MODE: "true"

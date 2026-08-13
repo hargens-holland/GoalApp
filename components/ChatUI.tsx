@@ -15,6 +15,8 @@ export default function ChatUI() {
   const [answer, setAnswer] = useState("");
   const [error, setError] = useState("");
   const [loadingQuestions, setLoadingQuestions] = useState(false);
+  /** Which half of the two-request build is in flight, for the progress copy. */
+  const [phase, setPhase] = useState<"roadmap" | "schedule">("roadmap");
 
   async function start() {
     if (goal.trim().length < 4) return;
@@ -40,10 +42,21 @@ export default function ChatUI() {
     }
   }
 
+  /**
+   * Build the goal in two requests rather than one.
+   *
+   * The server creates the goal and its roadmap (one model call) and returns
+   * immediately; scheduling the week is a second call. This keeps either
+   * request well inside a serverless function's time limit, and means a
+   * scheduling failure doesn't lose the roadmap the user just waited for.
+   */
   async function build(finalAnswers: string[]) {
     setStep(2);
+    setPhase("roadmap");
     setError("");
     const clarifications = questions.map((q, i) => ({ question: q, answer: finalAnswers[i] || "(no answer)" }));
+
+    let goalId: string;
     try {
       const res = await fetch("/api/goals", {
         method: "POST",
@@ -51,13 +64,29 @@ export default function ChatUI() {
         body: JSON.stringify({ goal, clarifications }),
       });
       if (!res.ok) throw new Error();
-      const data = (await res.json()) as { goalId: string };
-      router.push(`/goals/${data.goalId}`);
-      router.refresh();
+      ({ goalId } = (await res.json()) as { goalId: string });
     } catch {
       setError("Failed to build roadmap — try again");
       setStep(1);
+      return;
     }
+
+    // The goal exists from here on. Scheduling is best-effort: if it fails the
+    // user still gets their roadmap, and the week can be generated from the
+    // goal page. So this never blocks the redirect on an error.
+    setPhase("schedule");
+    try {
+      await fetch("/api/schedule", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ weekOffset: 0 }),
+      });
+    } catch {
+      // Intentionally ignored — see above.
+    }
+
+    router.push(`/goals/${goalId}`);
+    router.refresh();
   }
 
   function next() {
@@ -142,9 +171,13 @@ export default function ChatUI() {
       {step === 2 && (
         <div className="flex flex-col items-center py-10 text-center">
           <div className="mb-[22px] h-[46px] w-[46px] animate-spin rounded-full border-[3px] border-[rgba(255,255,255,0.1)] border-t-primary" />
-          <div className="mb-2 text-[21px] font-bold tracking-[-0.01em]">Building your roadmap…</div>
+          <div className="mb-2 text-[21px] font-bold tracking-[-0.01em]">
+            {phase === "roadmap" ? "Building your roadmap…" : "Scheduling your week…"}
+          </div>
           <div className="max-w-[340px] text-[14px] leading-[1.5] text-ink-3">
-            The Architect is breaking your goal into milestones and the Scheduler is placing this week&apos;s tasks into your free time.
+            {phase === "roadmap"
+              ? "The Architect is breaking your goal into a sequence of milestones."
+              : "The Scheduler is placing this week's tasks into your free time, balanced against your other goals."}
           </div>
         </div>
       )}

@@ -3,6 +3,12 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
+import {
+  completionUpdate,
+  isDone,
+  serializeTask,
+  type TaskStatus,
+} from "@/lib/tasks";
 
 async function ownsTask(userId: string, taskId: string) {
   const task = await prisma.task.findUnique({
@@ -27,27 +33,34 @@ export async function PATCH(
 
   const body = (await request.json()) as {
     completed?: boolean;
+    status?: TaskStatus;
     notes?: string;
     metadata?: unknown;
   };
 
+  // `status` is the underlying field; `completed` is the convenience form most
+  // clients send. An explicit status wins, since it can express "skipped".
+  const completionFields =
+    body.status !== undefined
+      ? {
+          status: body.status,
+          completedAt: isDone(body.status) ? new Date() : null,
+        }
+      : body.completed !== undefined
+        ? completionUpdate(body.completed)
+        : {};
+
   const updated = await prisma.task.update({
     where: { id: params.id },
     data: {
-      ...(body.completed !== undefined
-        ? {
-            completed: body.completed,
-            status: body.completed ? "done" : "pending",
-            completedAt: body.completed ? new Date() : null,
-          }
-        : {}),
+      ...completionFields,
       ...(body.notes !== undefined ? { notes: body.notes } : {}),
       ...(body.metadata !== undefined
         ? { metadata: body.metadata as Prisma.InputJsonValue }
         : {}),
     },
   });
-  return NextResponse.json(updated);
+  return NextResponse.json(serializeTask(updated));
 }
 
 export async function DELETE(

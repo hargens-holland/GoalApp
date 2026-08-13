@@ -4,7 +4,14 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  // Runtime connection. In serverless deployments this should be the *pooled*
+  // endpoint, since each function invocation opens its own connection and a
+  // direct endpoint exhausts the connection limit quickly.
   url      = env("DATABASE_URL")
+  // Migrations need a direct (unpooled) connection — a transaction pooler can't
+  // run the DDL and advisory locks `prisma migrate` relies on. Locally both
+  // point at the same database.
+  directUrl = env("DIRECT_URL")
 }
 
 model User {
@@ -68,9 +75,13 @@ model Task {
   estimatedMinutes Int?
   scheduledStart   DateTime?
   scheduledEnd     DateTime?
-  status           String     @default("pending") // pending | done | skipped
+  // Single source of truth for completion: pending | done | skipped.
+  // There is deliberately no separate `completed` boolean — the two would be
+  // two representations of one fact, kept in sync by hand. API responses expose
+  // a derived `completed` flag for convenience (see lib/tasks.ts), but nothing
+  // is stored twice. "skipped" is why the string wins: a boolean cannot say it.
+  status           String     @default("pending")
   order            Int        @default(0)
-  completed        Boolean    @default(false)
   notes            String?
   metadata         Json?
   completedAt      DateTime?
@@ -78,6 +89,8 @@ model Task {
   updatedAt        DateTime   @updatedAt
 
   @@index([goalId, date])
+  // Regeneration deletes only not-yet-done tasks in a range; this supports it.
+  @@index([goalId, status])
 }
 
 // Weekly assessment written by the Progress agent.

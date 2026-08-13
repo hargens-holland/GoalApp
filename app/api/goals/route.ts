@@ -4,8 +4,9 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 import { generateRoadmap } from "@/lib/agents/architect";
-import { getWeekRange, Clarification } from "@/lib/agents/shared";
-import { runScheduler } from "@/lib/planning";
+import { getWeekRange } from "@/lib/dates";
+import type { Clarification } from "@/lib/agents/schemas";
+import { serializeGoalTasks } from "@/lib/tasks";
 
 // List the user's goals with their roadmap and this week's tasks.
 export async function GET() {
@@ -24,7 +25,7 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
   });
 
-  return NextResponse.json(goals);
+  return NextResponse.json(goals.map(serializeGoalTasks));
 }
 
 // Create a goal and its roadmap (Architect), then lay out this week (Scheduler).
@@ -43,7 +44,10 @@ export async function POST(request: Request) {
   }
 
   const qaList = clarifications ?? [];
-  const roadmap = await generateRoadmap(goal, qaList);
+  // Never throws: falls back to deterministic planning if the model is
+  // unavailable, so goal creation always succeeds. `source` tells the client
+  // whether this plan was model-generated.
+  const { data: roadmap, source: roadmapSource } = await generateRoadmap(goal, qaList);
   const title = goal.length > 60 ? goal.slice(0, 57) + "…" : goal;
 
   const created = await prisma.goal.create({
@@ -68,9 +72,24 @@ export async function POST(request: Request) {
     include: { milestones: true },
   });
 
-  // Lay out the current week across all of the user's active goals.
-  const { start, end } = getWeekRange();
-  await runScheduler(session.user.id, start, end);
-
-  return NextResponse.json({ goalId: created.id, goal: created }, { status: 201 });
+  // Scheduling is deliberately NOT run here.
+  //
+  // Creating a goal used to run the Architect and then the Scheduler in the same
+  // request — two sequential model calls, comfortably the slowest path in the
+  // app and capable of exceeding a serverless function's time limit on a slow
+  // generation. The roadmap is what the user is waiting for, so it is returned
+  // as soon as it exists; the client then calls POST /api/schedule to lay out
+  // the week. That keeps each request to at most one model call.
+  //
+  // Splitting it this way also makes the failure modes independent: if
+  // scheduling fails, the goal and its roadmap still exist and the week can be
+  // generated later, rather than the whole creation failing.
+  return NextResponse.json(
+    {
+      goalId: created.id,
+      goal: created,
+      planning: { roadmap: roadmapSource, schedule: "pending" as const },
+    },
+    { status: 201 }
+  );
 }

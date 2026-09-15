@@ -185,28 +185,28 @@ export async function scheduleTasks(input: {
     maxTokens: 4096,
     schema: ScheduleSchema,
     fallback: () => fallbackSchedule(goals, days),
-    prompt: `You are a scheduling agent. Lay out concrete daily tasks for the
+    system: `You are a scheduling agent. Lay out concrete daily tasks for the
 user's active goals across the given days.
 
-${UNTRUSTED_NOTICE}
+Rules:
+- Use the exact goalId and milestoneId values shown.
+- Every date must be one of the days listed.
+- The task estimates on any single day must fit inside that day's available
+  minutes. Skip days with no availability entirely.
+- Balance work across goals rather than finishing one before starting another.
+- Build on each goal's stated focus. Make each task specific enough to act on
+  without further planning.
+- Do not duplicate tasks that are already scheduled.
 
-Active goals:
+${UNTRUSTED_NOTICE}`,
+    prompt: `Active goals:
 ${goalsText}
 
 Days and available capacity:
 ${daysText}
 
-Tasks already scheduled in this range — do not duplicate these:
-${existingText}
-
-Rules:
-- Use the exact goalId and milestoneId values shown above.
-- Every date must be one of the days listed above.
-- The task estimates on any single day must fit inside that day's available
-  minutes. Skip days with no availability entirely.
-- Balance work across goals rather than finishing one before starting another.
-- Build on each goal's stated focus. Make each task specific enough to act on
-  without further planning.`,
+Tasks already scheduled in this range:
+${existingText}`,
   });
 
   const tasks = keepValidTasks(outcome.data.tasks, goals, days);

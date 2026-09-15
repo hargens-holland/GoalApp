@@ -122,24 +122,23 @@ export async function assessProgress(
     maxTokens: 1024,
     schema: ProgressAssessmentSchema,
     fallback: () => fallbackAssessment(milestones, completions),
-    prompt: `You are a progress-tracking agent. Given a goal, its milestone
+    system: `You are a progress-tracking agent. Given a goal, its milestone
 roadmap, and the results of the last period's tasks, assess where the user
 currently stands. Do not invent tasks — that is another agent's job.
 
-${UNTRUSTED_NOTICE}
+Use the exact milestone ids shown. Set currentMilestoneId to the milestone the
+user is actively working on, or null if none applies. Base the assessment on
+what was actually completed, and pay attention to any notes the user left.
 
-Goal:
+${UNTRUSTED_NOTICE}`,
+    prompt: `Goal:
 ${untrusted(goal)}
 
 Roadmap:
 ${roadmap || "none"}
 
 Last period's tasks:
-${recent || "none"}
-
-Use the exact milestone ids shown above. Set currentMilestoneId to the milestone
-they are actively working on, or null if none applies. Base the assessment on
-what was actually completed, and pay attention to any notes the user left.`,
+${recent || "none"}`,
   });
 
   return { ...outcome, data: normalizeAssessment(outcome.data, milestones) };

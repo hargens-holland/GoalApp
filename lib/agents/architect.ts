@@ -97,14 +97,14 @@ export async function generateClarifyingQuestions(
     userId: opts.userId,
     maxTokens: 512,
     schema: ClarifyingQuestionsSchema,
-    prompt: `${UNTRUSTED_NOTICE}
+    system: `You help people plan long-term goals. Given a goal statement, write
+exactly 3 concise clarifying questions whose answers would let a planner build
+a better, more personal roadmap. Ask about things that cannot be inferred from
+the goal alone — current level, time available, constraints, or deadline.
 
-A user wants to achieve this goal:
-${untrusted(goal)}
-
-Write exactly 3 concise clarifying questions whose answers would let you build a
-better, more personal roadmap. Ask about things you cannot infer from the goal
-statement alone — current level, time available, constraints, or deadline.`,
+${UNTRUSTED_NOTICE}`,
+    prompt: `The goal:
+${untrusted(goal)}`,
     fallback: () => ({ questions: FALLBACK_QUESTIONS }),
   });
 
@@ -129,20 +129,22 @@ export async function generateRoadmap(
     maxTokens: 2048,
     schema: RoadmapSchema,
     fallback: () => fallbackRoadmap(goal),
-    prompt: `You are a goal-planning architect. Break this goal into a roadmap of
+    system: `You are a goal-planning architect. Break a goal into a roadmap of
 3-6 sequential milestones — phases of work, not day-to-day tasks.
 
-${UNTRUSTED_NOTICE}
+Each milestone needs a concrete success criterion that can actually be checked,
+and a targetWeekOffset counted in whole weeks from the start of the goal.
+Order them from 0, in the sequence they should be tackled. Respect any
+deadline or time budget the user states: the last milestone's week offset
+should land at or before the deadline, and the amount of work implied should
+fit the hours they said they have.
 
-Goal:
+${UNTRUSTED_NOTICE}`,
+    prompt: `Goal:
 ${untrusted(goal)}
 
 What the user told us:
-${context}
-
-Each milestone needs a concrete success criteria that can actually be checked,
-and a targetWeekOffset counted in whole weeks from the start of the goal.
-Order them from 0, in the sequence they should be tackled.`,
+${context}`,
   });
 }
 
@@ -175,20 +177,19 @@ export async function adjustRoadmap(
         targetWeekOffset: m.order * 2,
       })),
     }),
-    prompt: `You are a goal-planning architect. Revise this milestone roadmap to
-reflect the user's request. Keep it to 3-6 sequential milestones.
+    system: `You are a goal-planning architect. Revise an existing milestone
+roadmap to reflect a request from the user. Keep it to 3-6 sequential
+milestones, and preserve any milestone the request does not affect, including
+its wording.
 
-${UNTRUSTED_NOTICE}
-
-Goal:
+${UNTRUSTED_NOTICE}`,
+    prompt: `Goal:
 ${untrusted(goal)}
 
 Current roadmap:
 ${current}
 
 The user asks:
-${untrusted(request)}
-
-Preserve any milestone the request does not affect, including its wording.`,
+${untrusted(request)}`,
   });
 }

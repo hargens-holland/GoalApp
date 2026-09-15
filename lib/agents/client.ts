@@ -200,7 +200,19 @@ export interface GenerateOptions<T> {
   label: string;
   /** Model id for this call. Agents get theirs from models.ts. */
   model: string;
-  /** The fully-rendered user prompt. */
+  /**
+   * The stable part of the prompt: role, rules, output expectations. Sent as
+   * the system block and marked cacheable, so repeated calls pay full price
+   * for this text once per cache window rather than every time.
+   *
+   * Caching only engages above a per-model minimum prefix (512 tokens on
+   * Opus 5, 1024 on Sonnet 5). These system blocks are shorter than that
+   * today, so the marker is inert until the stable context grows — for
+   * instance when the Scheduler's system block carries a user's full roadmap
+   * set. Putting the split in place now means that growth is free.
+   */
+  system?: string;
+  /** The per-call part: the user's goal, this week's data, and so on. */
   prompt: string;
   /** Schema the response is constrained to and validated against. */
   schema: z.ZodType<T>;
@@ -222,6 +234,7 @@ export interface GenerateOptions<T> {
 export async function generate<T>({
   label,
   model,
+  system,
   prompt,
   schema,
   maxTokens,
@@ -251,6 +264,9 @@ export async function generate<T>({
       const message = await getClient().messages.parse({
         model,
         max_tokens: maxTokens,
+        ...(system
+          ? { system: [{ type: "text" as const, text: system, cache_control: { type: "ephemeral" as const } }] }
+          : {}),
         messages: [{ role: "user", content: prompt }],
         // Constrains generation to the schema rather than merely requesting it.
         output_config: { format: zodOutputFormat(schema) },

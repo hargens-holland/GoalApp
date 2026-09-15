@@ -40,3 +40,4 @@ yarn-error.log*
 # NOTE: prisma/migrations is intentionally NOT ignored.
 # Migration history is part of the source of truth and is required for
 # `prisma migrate deploy` to run against a production database.
+evals/results/

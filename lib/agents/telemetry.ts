@@ -21,12 +21,18 @@ export interface AgentCallRecord extends Usage {
   userId?: string;
 }
 
-function isTestRunner(): boolean {
-  return process.env.VITEST === "true" || process.env.NODE_ENV === "test";
+function isDisabled(): boolean {
+  return (
+    process.env.VITEST === "true" ||
+    process.env.NODE_ENV === "test" ||
+    // Eval runs and one-off scripts set this so their calls don't land in the
+    // product's usage numbers.
+    process.env.AGENT_TELEMETRY === "off"
+  );
 }
 
 export function recordAgentCall(record: AgentCallRecord): void {
-  if (isTestRunner()) return;
+  if (isDisabled()) return;
 
   const costUsd = record.source === "llm" ? estimateCost(record.model, record) : 0;
 

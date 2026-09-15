@@ -154,7 +154,15 @@ export async function scheduleTasks(input: {
 
   // Nothing to schedule — don't spend a request finding that out.
   if (!goals.length || !days.length) {
-    return { data: { tasks: [] }, source: "fallback", reason: "demo_mode", attempts: 0 };
+    return {
+      data: { tasks: [] },
+      source: "fallback",
+      reason: "demo_mode",
+      attempts: 0,
+      model: input.model ?? modelFor("scheduler"),
+      latencyMs: 0,
+      usage: { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 },
+    };
   }
 
   // Ids are ours; titles and focus text trace back to the user (goal titles
@@ -215,10 +223,10 @@ ${existingText}`,
   // writing an empty week over a user's existing plan.
   if (!tasks.length && outcome.source === "llm") {
     return {
+      ...outcome,
       data: { tasks: keepValidTasks(fallbackSchedule(goals, days).tasks, goals, days) },
       source: "fallback",
       reason: "invalid_output",
-      attempts: outcome.attempts,
     };
   }
 

@@ -116,10 +116,16 @@ export type AgentOutcome<T> = {
   reason?: FallbackReason;
   /** Model attempts made (0 in demo mode). */
   attempts: number;
+  /** The model this call was routed to, whether or not it answered. */
+  model: string;
+  /** Wall-clock for the whole call including retries and fallback. */
+  latencyMs: number;
+  /** Tokens across every attempt. Zero when no request was made. */
+  usage: CallUsage;
 };
 
 /** Token usage summed across every attempt of one generate() call. */
-interface CallUsage {
+export interface CallUsage {
   inputTokens: number;
   outputTokens: number;
   cacheReadTokens: number;
@@ -250,8 +256,11 @@ export async function generate<T>({
       source: "fallback",
       reason: "demo_mode",
       attempts: 0,
+      model,
+      latencyMs: Date.now() - startedAt,
+      usage,
     };
-    logOutcome(label, model, outcome, usage, Date.now() - startedAt, userId);
+    logOutcome(label, model, outcome, usage, outcome.latencyMs, userId);
     return outcome;
   }
 
@@ -301,8 +310,11 @@ export async function generate<T>({
         data: message.parsed_output,
         source: "llm",
         attempts,
+        model,
+        latencyMs: Date.now() - startedAt,
+        usage,
       };
-      logOutcome(label, model, outcome, usage, Date.now() - startedAt, userId);
+      logOutcome(label, model, outcome, usage, outcome.latencyMs, userId);
       return outcome;
     } catch (error) {
       reason = classifyError(error);
@@ -321,7 +333,10 @@ export async function generate<T>({
     source: "fallback",
     reason,
     attempts,
+    model,
+    latencyMs: Date.now() - startedAt,
+    usage,
   };
-  logOutcome(label, model, outcome, usage, Date.now() - startedAt, userId);
+  logOutcome(label, model, outcome, usage, outcome.latencyMs, userId);
   return outcome;
 }

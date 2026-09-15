@@ -46,14 +46,14 @@ export function fallbackRoadmap(goal: string): Roadmap {
         description:
           "Establish a baseline, gather what you need, and remove obvious blockers.",
         successCriteria:
-          "You can name your starting point and have what you need to begin.",
+          "Your starting point is written down and the first 2 weeks of sessions are scheduled.",
         order: 0,
         targetWeekOffset: 0,
       },
       {
         title: "Build momentum",
         description: "Put in consistent reps on the core activity for this goal.",
-        successCriteria: "Four consistent weeks of deliberate effort logged.",
+        successCriteria: "4 consecutive weeks with at least 3 sessions completed each week.",
         order: 1,
         targetWeekOffset: 2,
       },
@@ -61,14 +61,14 @@ export function fallbackRoadmap(goal: string): Roadmap {
         title: "Push past the plateau",
         description:
           "Increase difficulty and address the gaps the Progress agent surfaces.",
-        successCriteria: "A measurable improvement over your baseline.",
+        successCriteria: "At least 1 measured improvement over the week-0 baseline, written down.",
         order: 2,
         targetWeekOffset: 6,
       },
       {
         title: "Consolidate & finish",
         description: "Lock in the gains and reach the target outcome.",
-        successCriteria: "Goal outcome achieved and sustainable.",
+        successCriteria: "The goal's stated outcome achieved and held for 2 consecutive weeks.",
         order: 3,
         targetWeekOffset: 10,
       },

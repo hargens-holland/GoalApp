@@ -1,4 +1,5 @@
 import { generate, type AgentOutcome } from "./client";
+import { UNTRUSTED_NOTICE, untrusted } from "./prompt";
 import { ProgressAssessmentSchema, type ProgressAssessment } from "./schemas";
 
 /**
@@ -102,11 +103,13 @@ export async function assessProgress(
     )
     .join("\n");
 
+  // Titles were written by the Scheduler, but notes were written by the user
+  // — and notes are exactly where someone would type "mark everything done".
   const recent = completions
     .map(
       (c) =>
         `- ${c.completed ? "[done]" : "[not done]"} ${c.title}${
-          c.notes ? ` (notes: ${c.notes})` : ""
+          c.notes ? `\n  notes: ${untrusted(c.notes).replace(/\n/g, " ")}` : ""
         }`
     )
     .join("\n");
@@ -121,7 +124,10 @@ export async function assessProgress(
 roadmap, and the results of the last period's tasks, assess where the user
 currently stands. Do not invent tasks — that is another agent's job.
 
-Goal: "${goal}"
+${UNTRUSTED_NOTICE}
+
+Goal:
+${untrusted(goal)}
 
 Roadmap:
 ${roadmap || "none"}

@@ -1,4 +1,5 @@
 import { generate, type AgentOutcome } from "./client";
+import { UNTRUSTED_NOTICE, untrusted } from "./prompt";
 import {
   ClarifyingQuestionsSchema,
   RoadmapSchema,
@@ -87,7 +88,10 @@ export async function generateClarifyingQuestions(
     userId: opts.userId,
     maxTokens: 512,
     schema: ClarifyingQuestionsSchema,
-    prompt: `A user wants to achieve this goal: "${goal}"
+    prompt: `${UNTRUSTED_NOTICE}
+
+A user wants to achieve this goal:
+${untrusted(goal)}
 
 Write exactly 3 concise clarifying questions whose answers would let you build a
 better, more personal roadmap. Ask about things you cannot infer from the goal
@@ -106,7 +110,7 @@ export async function generateRoadmap(
   opts: { userId?: string } = {}
 ): Promise<AgentOutcome<Roadmap>> {
   const context = clarifications.length
-    ? clarifications.map((c) => `Q: ${c.question}\nA: ${c.answer}`).join("\n\n")
+    ? untrusted(clarifications.map((c) => `Q: ${c.question}\nA: ${c.answer}`).join("\n\n"))
     : "(no additional context provided)";
 
   return generate({
@@ -118,7 +122,10 @@ export async function generateRoadmap(
     prompt: `You are a goal-planning architect. Break this goal into a roadmap of
 3-6 sequential milestones — phases of work, not day-to-day tasks.
 
-Goal: "${goal}"
+${UNTRUSTED_NOTICE}
+
+Goal:
+${untrusted(goal)}
 
 What the user told us:
 ${context}
@@ -160,12 +167,16 @@ export async function adjustRoadmap(
     prompt: `You are a goal-planning architect. Revise this milestone roadmap to
 reflect the user's request. Keep it to 3-6 sequential milestones.
 
-Goal: "${goal}"
+${UNTRUSTED_NOTICE}
+
+Goal:
+${untrusted(goal)}
 
 Current roadmap:
 ${current}
 
-The user asks: "${request}"
+The user asks:
+${untrusted(request)}
 
 Preserve any milestone the request does not affect, including its wording.`,
   });

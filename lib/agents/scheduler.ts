@@ -1,4 +1,5 @@
 import { generate, type AgentOutcome } from "./client";
+import { UNTRUSTED_NOTICE, untrusted } from "./prompt";
 import { ScheduleSchema, type GeneratedDailyTask, type Schedule } from "./schemas";
 
 /**
@@ -153,16 +154,16 @@ export async function scheduleTasks(input: {
     return { data: { tasks: [] }, source: "fallback", reason: "demo_mode", attempts: 0 };
   }
 
+  // Ids are ours; titles and focus text trace back to the user (goal titles
+  // directly, focus via the Progress agent reading their notes).
   const goalsText = goals
     .map(
       (g) =>
-        `[goalId:${g.id}] "${g.title}" | current milestone: ${
-          g.currentMilestoneTitle || "n/a"
-        } [milestoneId:${g.currentMilestoneId ?? "null"}] | focus: ${
-          g.focusForWeek || "n/a"
-        }`
+        `[goalId:${g.id}] [milestoneId:${g.currentMilestoneId ?? "null"}]\n${untrusted(
+          `title: ${g.title}\ncurrent milestone: ${g.currentMilestoneTitle || "n/a"}\nfocus: ${g.focusForWeek || "n/a"}`
+        )}`
     )
-    .join("\n");
+    .join("\n\n");
 
   const daysText = days
     .map((d) => `${d.date}: ${d.availableMinutes} min available`)
@@ -182,6 +183,8 @@ export async function scheduleTasks(input: {
     fallback: () => fallbackSchedule(goals, days),
     prompt: `You are a scheduling agent. Lay out concrete daily tasks for the
 user's active goals across the given days.
+
+${UNTRUSTED_NOTICE}
 
 Active goals:
 ${goalsText}

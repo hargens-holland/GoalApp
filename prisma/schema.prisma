@@ -35,6 +35,10 @@ model Goal {
   clarifications Json              @default("[]")
   status         String            @default("active") // active | paused | done
   progress       Int               @default(0) // 0-100, maintained by the Progress agent
+  // OKLCH hue (0-359) for every colored element belonging to this goal.
+  // Assigned at creation to be maximally distinct from the user's other goals
+  // — see lib/colors.ts.
+  hue            Int               @default(0)
   targetDate     DateTime?
   userId         String
   user           User              @relation(fields: [userId], references: [id], onDelete: Cascade)

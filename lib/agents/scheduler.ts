@@ -110,7 +110,13 @@ export function keepValidTasks(
   days: DayCapacity[]
 ): GeneratedDailyTask[] {
   const goalIds = new Set(goals.map((g) => g.id));
-  const dayDates = new Set(days.map((d) => d.date));
+  // A day with no availability is not a valid target. The prompt says so, but
+  // the model does not always listen, and a task on a closed day would reach
+  // the time-slot packer with nowhere to go and land un-slotted on a day the
+  // user said was off. Enforcing it here means the constraint the Availability
+  // page promises ("tasks only land inside your windows") holds regardless of
+  // what the model returns.
+  const dayDates = new Set(days.filter((d) => d.availableMinutes > 0).map((d) => d.date));
   // A milestone id must belong to the goal the task is attached to, otherwise
   // it is dropped rather than creating a cross-goal reference.
   const milestoneByGoal = new Map(

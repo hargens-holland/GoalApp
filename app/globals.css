@@ -3,15 +3,22 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    background: theme(colors.paper.DEFAULT);
+  }
   body {
-    @apply bg-bg text-ink antialiased;
+    @apply bg-paper text-ink antialiased;
+    font-feature-settings: "ss01", "cv11";
+  }
+  ::selection {
+    background: theme(colors.paper.3);
   }
   ::-webkit-scrollbar {
     width: 10px;
     height: 10px;
   }
   ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.09);
+    background: rgba(28, 25, 20, 0.14);
     border-radius: 99px;
   }
   ::-webkit-scrollbar-track {
@@ -20,16 +27,40 @@
 }
 
 @layer components {
-  .btn-primary {
-    @apply inline-flex items-center justify-center gap-2 rounded-[10px] bg-primary px-[15px] py-[9px] text-[13.5px] font-semibold text-white transition-colors hover:bg-primary-hover disabled:cursor-not-allowed disabled:opacity-40;
+  /* Page and section titles. Serif, set large, tight. */
+  .display {
+    @apply font-display font-normal tracking-[-0.015em];
+  }
+
+  /* Small-caps label above a block of content. */
+  .eyebrow {
+    @apply text-[11px] font-semibold uppercase tracking-[0.08em] text-ink-3;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded bg-ink px-[14px] py-[8px] text-[13.5px] font-medium text-paper transition-colors hover:bg-ink-2 disabled:cursor-not-allowed disabled:opacity-40;
   }
   .btn-ghost {
-    @apply inline-flex items-center justify-center gap-[7px] rounded-[10px] border border-[rgba(255,255,255,0.1)] bg-transparent px-[14px] py-[9px] text-[13px] font-medium text-[#d4d4d8] transition-colors hover:bg-[rgba(255,255,255,0.05)] disabled:cursor-not-allowed disabled:opacity-40;
+    @apply inline-flex items-center justify-center gap-2 rounded border border-rule-2 bg-transparent px-[13px] py-[7px] text-[13.5px] font-medium text-ink transition-colors hover:bg-paper-2 disabled:cursor-not-allowed disabled:opacity-40;
   }
+  .btn-text {
+    @apply inline-flex items-center gap-[6px] text-[13.5px] font-medium text-ink-2 underline-offset-[3px] transition-colors hover:text-ink hover:underline;
+  }
+
   .field {
-    @apply w-full rounded-[10px] border border-[rgba(255,255,255,0.1)] bg-field px-[14px] py-[11px] text-[14px] text-ink outline-none transition-colors placeholder:text-ink-4 focus:border-primary;
+    @apply w-full rounded border border-rule-2 bg-surface px-[13px] py-[10px] text-[14.5px] text-ink outline-none transition-colors placeholder:text-ink-4 focus:border-ink;
   }
   .label {
-    @apply mb-[6px] text-[12px] font-medium text-ink-2;
+    @apply mb-[6px] block text-[12.5px] font-medium text-ink-2;
+  }
+
+  /* Hairline-ruled list rows. */
+  .row {
+    @apply border-t border-rule;
+  }
+
+  /* Loading placeholder. */
+  .skeleton {
+    @apply animate-pulse rounded-sm bg-paper-3;
   }
 }

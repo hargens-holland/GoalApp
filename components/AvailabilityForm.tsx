@@ -63,55 +63,64 @@ export default function AvailabilityForm() {
       body: JSON.stringify({ windows }),
     });
     setSaving(false);
-    toast("Availability saved");
+    toast("Saved. Replan the week to apply it.");
   }
 
-  return (
-    <div className="max-w-[680px]">
-      <div className="text-[26px] font-bold tracking-[-0.02em]">Availability</div>
-      <div className="mb-6 mt-[5px] max-w-[560px] text-[14.5px] leading-[1.5] text-ink-3">
-        The Scheduler only places daily tasks inside the time windows you set here. Turn off a day to keep it free.
-      </div>
+  const totalHours = days.filter((d) => d.on).reduce((s, d) => s + Math.max(0, d.end - d.start), 0) / 60;
 
-      <div className="overflow-hidden rounded-[16px] border border-[rgba(255,255,255,0.06)] bg-card">
+  const selectClass =
+    "cursor-pointer rounded border border-rule-2 bg-surface px-2 py-[5px] font-mono text-[13px] text-ink disabled:cursor-default disabled:text-ink-4";
+
+  return (
+    <div className="mx-auto max-w-[640px]">
+      <div className="eyebrow">Availability</div>
+      <h1 className="display mt-1 text-[40px] leading-[1.05]">When are you free?</h1>
+      <p className="mt-4 text-[15.5px] leading-[1.55] text-ink-2">
+        Tasks are only ever placed inside these windows. A day that&apos;s off stays empty.
+      </p>
+
+      <div className="mt-8 border-t border-rule">
         {days.map((d) => (
-          <div key={d.dayOfWeek} className="flex items-center gap-4 border-t border-[rgba(255,255,255,0.05)] px-5 py-[14px] first:border-t-0">
+          <div key={d.dayOfWeek} className="row flex items-center gap-4 py-[12px]">
             <button
               onClick={() => patch(d.dayOfWeek, { on: !d.on })}
-              className="relative h-6 w-[42px] flex-shrink-0 rounded-full transition-colors"
-              style={{ background: d.on ? "#6d56f0" : "rgba(255,255,255,0.12)" }}
+              role="switch"
+              aria-checked={d.on}
               aria-label={`Toggle ${d.name}`}
+              className="relative h-[20px] w-[34px] flex-shrink-0 rounded-full transition-colors"
+              style={{ background: d.on ? "#1c1915" : "rgba(28,25,20,0.18)" }}
             >
-              <span className="absolute top-[3px] h-[18px] w-[18px] rounded-full bg-white transition-[left]" style={{ left: d.on ? 21 : 3 }} />
+              <span className="absolute top-[3px] h-[14px] w-[14px] rounded-full bg-paper transition-[left]" style={{ left: d.on ? 17 : 3 }} />
             </button>
-            <span className="w-[96px] flex-shrink-0 text-[14.5px] font-semibold" style={{ color: d.on ? "#f4f4f5" : "#71717a" }}>{d.name}</span>
-            <div className="flex flex-1 items-center gap-[10px]" style={{ opacity: d.on ? 1 : 0.4 }}>
-              <select
-                value={d.start}
-                disabled={!d.on}
-                onChange={(e) => patch(d.dayOfWeek, { start: Number(e.target.value) })}
-                className="cursor-pointer rounded-[9px] border border-[rgba(255,255,255,0.1)] bg-task-card px-[10px] py-[7px] font-mono text-[13px] font-medium text-ink"
-              >
-                {TIME_OPTIONS.map((m) => <option key={m} value={m}>{minutesToHHMM(m)}</option>)}
-              </select>
-              <span className="text-[13px] text-ink-4">to</span>
-              <select
-                value={d.end}
-                disabled={!d.on}
-                onChange={(e) => patch(d.dayOfWeek, { end: Number(e.target.value) })}
-                className="cursor-pointer rounded-[9px] border border-[rgba(255,255,255,0.1)] bg-task-card px-[10px] py-[7px] font-mono text-[13px] font-medium text-ink"
-              >
-                {TIME_OPTIONS.map((m) => <option key={m} value={m}>{minutesToHHMM(m)}</option>)}
-              </select>
-              <span className="ml-auto text-[12px] font-medium" style={{ color: d.on ? "#52525b" : "#71717a" }}>{d.on ? "" : "Day off"}</span>
-            </div>
+            <span className={`w-[100px] flex-shrink-0 text-[15px] ${d.on ? "text-ink" : "text-ink-4"}`}>{d.name}</span>
+            {loading ? (
+              <div className="skeleton h-[28px] w-[170px]" />
+            ) : d.on ? (
+              <div className="flex items-center gap-2">
+                <select value={d.start} onChange={(e) => patch(d.dayOfWeek, { start: Number(e.target.value) })} className={selectClass}>
+                  {TIME_OPTIONS.map((m) => <option key={m} value={m}>{minutesToHHMM(m)}</option>)}
+                </select>
+                <span className="text-[13px] text-ink-4">to</span>
+                <select value={d.end} onChange={(e) => patch(d.dayOfWeek, { end: Number(e.target.value) })} className={selectClass}>
+                  {TIME_OPTIONS.map((m) => <option key={m} value={m}>{minutesToHHMM(m)}</option>)}
+                </select>
+                <span className="ml-3 font-mono text-[12px] text-ink-4">{((d.end - d.start) / 60).toFixed(1)}h</span>
+              </div>
+            ) : (
+              <span className="text-[13.5px] text-ink-4">Off</span>
+            )}
           </div>
         ))}
       </div>
 
-      <button onClick={save} disabled={saving || loading} className="mt-5 rounded-[11px] bg-primary px-[22px] py-[11px] text-[14px] font-semibold text-white transition-colors hover:bg-primary-hover disabled:opacity-40">
-        {saving ? "Saving…" : "Save availability"}
-      </button>
+      <div className="mt-6 flex items-center justify-between">
+        <span className="text-[13.5px] text-ink-3">
+          <span className="font-mono text-ink-2">{totalHours.toFixed(1)}</span> hours a week
+        </span>
+        <button onClick={save} disabled={saving || loading} className="btn">
+          {saving ? "Saving…" : "Save"}
+        </button>
+      </div>
     </div>
   );
 }

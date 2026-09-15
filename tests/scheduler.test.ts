@@ -65,6 +65,14 @@ describe("keepValidTasks", () => {
     expect(result).toEqual([]);
   });
 
+  it("drops tasks dated on a day with no availability", () => {
+    // 2026-06-27 is listed but has zero capacity. The Availability page
+    // promises tasks only land inside the user's windows; a task here would
+    // reach the packer with nowhere to go.
+    const result = keepValidTasks([task({ date: "2026-06-27" })], goals, days);
+    expect(result).toHaveLength(0);
+  });
+
   it("replaces a milestone id belonging to a different goal", () => {
     // ms-2 belongs to goal-2, so attaching it to goal-1 is a cross-goal
     // reference; it is corrected to goal-1's own current milestone.

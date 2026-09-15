@@ -15,7 +15,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const show = useCallback((msg: string) => {
     setToast(msg);
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => setToast(null), 2400);
+    timer.current = setTimeout(() => setToast(null), 2600);
   }, []);
 
   return (
@@ -23,8 +23,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {children}
       {toast && (
         <div
-          className="fixed bottom-[26px] left-1/2 z-[100] -translate-x-1/2 rounded-[11px] border border-[rgba(255,255,255,0.12)] bg-elevated px-5 py-3 text-[13.5px] font-medium text-[#e4e4e7]"
-          style={{ boxShadow: "0 12px 40px rgba(0,0,0,0.5)" }}
+          role="status"
+          className="fixed bottom-6 left-1/2 z-[100] -translate-x-1/2 rounded bg-ink px-4 py-[10px] text-[13.5px] text-paper"
+          style={{ boxShadow: "0 8px 24px rgba(28,25,20,0.18)" }}
         >
           {toast}
         </div>

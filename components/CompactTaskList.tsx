@@ -1,17 +1,20 @@
 "use client";
 
 import { useState } from "react";
+import { goalColor } from "@/lib/colors";
 
 export interface CompactTask {
   id: string;
   title: string;
+  /** "Mon 15" */
+  day: string;
   time: string;
   completed: boolean;
-  color: string;
 }
 
-function Row({ task }: { task: CompactTask }) {
+function Row({ task, hue }: { task: CompactTask; hue: number }) {
   const [completed, setCompleted] = useState(task.completed);
+  const color = goalColor(hue);
   async function toggle() {
     const next = !completed;
     setCompleted(next);
@@ -22,28 +25,23 @@ function Row({ task }: { task: CompactTask }) {
     });
   }
   return (
-    <div className="flex items-center gap-[11px] border-t border-[rgba(255,255,255,0.05)] px-[18px] py-[10px]">
+    <div className="row flex items-center gap-3 py-[9px]">
       <button
         onClick={toggle}
-        className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-[6px] border-[1.5px] text-[10px] font-bold text-white"
-        style={{ borderColor: completed ? task.color : "rgba(255,255,255,0.22)", background: completed ? task.color : "transparent" }}
-      >
-        {completed ? "✓" : ""}
-      </button>
-      <span className="w-[38px] flex-shrink-0 font-mono text-[12px] font-medium text-ink-3">{task.time}</span>
-      <span
-        className="flex-1 text-[13.5px] font-medium"
-        style={{ color: completed ? "#6b6b73" : "#f4f4f5", textDecoration: completed ? "line-through" : "none" }}
-      >
-        {task.title}
-      </span>
+        aria-label={completed ? "Mark not done" : "Mark done"}
+        className="flex h-[14px] w-[14px] flex-shrink-0 items-center justify-center rounded-sm border transition-colors"
+        style={{ borderColor: completed ? color : "rgba(28,25,20,0.35)", background: completed ? color : "transparent" }}
+      />
+      <span className="w-[52px] flex-shrink-0 font-mono text-[12px] text-ink-3">{task.day}</span>
+      <span className="w-[42px] flex-shrink-0 font-mono text-[12px] text-ink-4">{task.time || "—"}</span>
+      <span className={`flex-1 truncate text-[14px] ${completed ? "text-ink-3 line-through" : "text-ink"}`}>{task.title}</span>
     </div>
   );
 }
 
-export default function CompactTaskList({ tasks }: { tasks: CompactTask[] }) {
+export default function CompactTaskList({ tasks, hue }: { tasks: CompactTask[]; hue: number }) {
   if (!tasks.length) {
-    return <div className="border-t border-[rgba(255,255,255,0.05)] px-[18px] py-6 text-center text-[12.5px] text-ink-3">No tasks this week.</div>;
+    return <p className="py-4 text-[13.5px] text-ink-3">Nothing placed this week.</p>;
   }
-  return <>{tasks.map((t) => <Row key={t.id} task={t} />)}</>;
+  return <div className="border-t border-rule">{tasks.map((t) => <Row key={t.id} task={t} hue={hue} />)}</div>;
 }

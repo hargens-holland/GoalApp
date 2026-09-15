@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 
 type Step = 0 | 1 | 2;
 
+/**
+ * Three screens: state the goal, answer a few questions, wait. The copy talks
+ * about what the user gets, not about which agent produces it.
+ */
 export default function ChatUI() {
   const router = useRouter();
   const [step, setStep] = useState<Step>(0);
@@ -36,7 +40,7 @@ export default function ChatUI() {
       setAnswer("");
       setStep(1);
     } catch {
-      setError("Something went wrong — try again");
+      setError("Something went wrong — try again.");
     } finally {
       setLoadingQuestions(false);
     }
@@ -66,14 +70,14 @@ export default function ChatUI() {
       if (!res.ok) throw new Error();
       ({ goalId } = (await res.json()) as { goalId: string });
     } catch {
-      setError("Failed to build roadmap — try again");
+      setError("Couldn't build the roadmap — try again.");
       setStep(1);
       return;
     }
 
     // The goal exists from here on. Scheduling is best-effort: if it fails the
-    // user still gets their roadmap, and the week can be generated from the
-    // goal page. So this never blocks the redirect on an error.
+    // user still gets their roadmap, and the week can be re-planned from the
+    // week page. So this never blocks the redirect on an error.
     setPhase("schedule");
     try {
       await fetch("/api/schedule", {
@@ -89,98 +93,103 @@ export default function ChatUI() {
     router.refresh();
   }
 
-  function next() {
+  function advance(value: string) {
     const updated = [...answers];
-    updated[qIndex] = answer;
-    setAnswers(updated);
-    setAnswer("");
-    if (qIndex < questions.length - 1) {
-      setQIndex(qIndex + 1);
-    } else {
-      build(updated);
-    }
-  }
-
-  function skip() {
-    const updated = [...answers];
-    updated[qIndex] = "";
+    updated[qIndex] = value;
     setAnswers(updated);
     setAnswer("");
     if (qIndex < questions.length - 1) setQIndex(qIndex + 1);
     else build(updated);
   }
 
-  const seg = (active: boolean) => (active ? "#6d56f0" : "rgba(255,255,255,0.1)");
-
   return (
-    <div className="mx-auto mt-[30px] max-w-[580px]">
-      <div className="mb-[26px] flex gap-[7px]">
-        <div className="h-1 flex-1 rounded-full" style={{ background: seg(step >= 0) }} />
-        <div className="h-1 flex-1 rounded-full" style={{ background: seg(step >= 1) }} />
-        <div className="h-1 flex-1 rounded-full" style={{ background: seg(step >= 2) }} />
+    <div className="mx-auto mt-10 max-w-[600px]">
+      <div className="flex items-baseline justify-between">
+        <span className="eyebrow">New goal</span>
+        <span className="font-mono text-[12px] text-ink-4">{step + 1} / 3</span>
       </div>
 
-      {error && <div className="mb-4 rounded-[10px] border border-red-500/20 bg-red-500/10 px-4 py-3 text-[13px] text-red-400">{error}</div>}
+      {error && <p className="mt-4 text-[13.5px] text-danger">{error}</p>}
 
       {step === 0 && (
-        <div>
-          <div className="mb-2 text-[12px] font-semibold uppercase tracking-[0.04em] text-[#a899ff]">New goal · Step 1 of 3</div>
-          <div className="mb-2 text-[25px] font-bold tracking-[-0.02em]">What do you want to achieve?</div>
-          <div className="mb-5 text-[14.5px] leading-[1.5] text-ink-3">
-            State it in plain language. The Architect agent turns it into a sequenced roadmap, then the Scheduler drops the first tasks into your calendar.
-          </div>
+        <div className="mt-3">
+          <h1 className="display text-[40px] leading-[1.05]">What do you want to achieve?</h1>
+          <p className="mt-4 text-[15.5px] leading-[1.55] text-ink-2">
+            Say it plainly, with a deadline if you have one. You&apos;ll get a roadmap of milestones and this
+            week&apos;s first steps, placed into the hours you&apos;re free.
+          </p>
           <textarea
             value={goal}
             onChange={(e) => setGoal(e.target.value)}
-            placeholder="e.g. Learn to play three fingerstyle guitar songs from memory by the end of the year"
-            className="min-h-[120px] w-full resize-y rounded-[14px] border border-[rgba(255,255,255,0.1)] bg-[#121217] px-[17px] py-[15px] text-[15px] leading-[1.5] text-ink outline-none focus:border-primary"
+            onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) start(); }}
+            placeholder="Play three fingerstyle guitar songs from memory by December"
+            className="field mt-7 min-h-[120px] resize-y text-[17px] leading-[1.5]"
             autoFocus
           />
-          <button
-            onClick={start}
-            disabled={goal.trim().length < 4 || loadingQuestions}
-            className="mt-[18px] w-full rounded-[12px] bg-primary py-[13px] text-[15px] font-semibold text-white transition-colors hover:bg-primary-hover disabled:opacity-40"
-          >
-            {loadingQuestions ? "Thinking…" : "Continue"}
-          </button>
+          <div className="mt-5 flex items-center justify-between">
+            <span className="text-[12.5px] text-ink-4">⌘↵ to continue</span>
+            <button onClick={start} disabled={goal.trim().length < 4 || loadingQuestions} className="btn">
+              {loadingQuestions ? "One moment…" : "Continue"}
+            </button>
+          </div>
         </div>
       )}
 
       {step === 1 && questions.length > 0 && (
-        <div>
-          <div className="mb-2 text-[12px] font-semibold uppercase tracking-[0.04em] text-[#a899ff]">
-            A few quick questions · {qIndex + 1} of {questions.length}
-          </div>
-          <div className="mb-5 text-[24px] font-bold leading-[1.3] tracking-[-0.02em]">{questions[qIndex]}</div>
+        <div className="mt-3">
+          <p className="text-[13px] text-ink-3">
+            Question {qIndex + 1} of {questions.length}
+          </p>
+          <h1 className="display mt-2 text-[34px] leading-[1.15]">{questions[qIndex]}</h1>
           <textarea
             value={answer}
             onChange={(e) => setAnswer(e.target.value)}
-            placeholder="Type your answer…"
-            className="min-h-[100px] w-full resize-y rounded-[14px] border border-[rgba(255,255,255,0.1)] bg-[#121217] px-[17px] py-[15px] text-[15px] leading-[1.5] text-ink outline-none focus:border-primary"
+            onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) advance(answer); }}
+            placeholder="A sentence is plenty"
+            className="field mt-7 min-h-[100px] resize-y text-[16px] leading-[1.5]"
             autoFocus
           />
-          <div className="mt-[18px] flex gap-[10px]">
-            <button onClick={skip} className="rounded-[12px] border border-[rgba(255,255,255,0.1)] bg-transparent px-5 py-[13px] text-[14px] font-medium text-ink-2 transition-colors hover:bg-[rgba(255,255,255,0.05)]">Skip</button>
-            <button onClick={next} className="flex-1 rounded-[12px] bg-primary py-[13px] text-[15px] font-semibold text-white transition-colors hover:bg-primary-hover">
-              {qIndex < questions.length - 1 ? "Continue" : "Build roadmap"}
+          <div className="mt-5 flex items-center justify-between">
+            <button onClick={() => advance("")} className="btn-text">Skip</button>
+            <button onClick={() => advance(answer)} className="btn">
+              {qIndex < questions.length - 1 ? "Continue" : "Build the roadmap"}
             </button>
           </div>
         </div>
       )}
 
       {step === 2 && (
-        <div className="flex flex-col items-center py-10 text-center">
-          <div className="mb-[22px] h-[46px] w-[46px] animate-spin rounded-full border-[3px] border-[rgba(255,255,255,0.1)] border-t-primary" />
-          <div className="mb-2 text-[21px] font-bold tracking-[-0.01em]">
-            {phase === "roadmap" ? "Building your roadmap…" : "Scheduling your week…"}
-          </div>
-          <div className="max-w-[340px] text-[14px] leading-[1.5] text-ink-3">
+        <div className="mt-3">
+          <h1 className="display text-[34px] leading-[1.15]">
+            {phase === "roadmap" ? "Building your roadmap" : "Placing this week"}
+            <Ellipsis />
+          </h1>
+          <p className="mt-4 text-[15px] leading-[1.55] text-ink-2">
             {phase === "roadmap"
-              ? "The Architect is breaking your goal into a sequence of milestones."
-              : "The Scheduler is placing this week's tasks into your free time, balanced against your other goals."}
+              ? "Breaking the goal into a sequence of milestones, each with a way to tell it's done."
+              : "Fitting the first tasks into your free hours, balanced against your other goals."}
+          </p>
+          <div className="mt-10 space-y-5">
+            {[0.7, 0.55, 0.62, 0.45].map((w, i) => (
+              <div key={i} className="flex gap-4">
+                <div className="skeleton mt-1 h-[11px] w-[11px] rounded-full" />
+                <div className="flex-1">
+                  <div className="skeleton h-[14px]" style={{ width: `${w * 100}%` }} />
+                  <div className="skeleton mt-2 h-[11px]" style={{ width: `${Math.min(95, w * 100 + 25)}%` }} />
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+function Ellipsis() {
+  return (
+    <span className="inline-flex w-[1.2em] justify-start">
+      <span className="animate-pulse">…</span>
+    </span>
   );
 }

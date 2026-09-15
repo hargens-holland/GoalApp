@@ -386,7 +386,7 @@ scheduling failure degrades to an empty week rather than a failed goal.
 ## Auth
 
 NextAuth with credentials and JWT sessions; bcrypt password hashing. `middleware.ts`
-gates `/dashboard`, `/goals/*`, `/schedule`, and `/settings/*`.
+gates `/dashboard`, `/goals/*`, `/schedule` (a redirect to the week view), and `/settings/*`.
 
 Every route handler independently re-checks the session and verifies ownership
 before touching a record — `middleware` proves you're logged in, not that the

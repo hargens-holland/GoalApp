@@ -40,9 +40,3 @@ export function weekRangeLabel(startISO: string, endISO: string): string {
 export function shortDow(dow: number): string {
   return DOW_SHORT[dow];
 }
-
-export function greeting(hour: number): string {
-  if (hour < 12) return "Good morning";
-  if (hour < 18) return "Good afternoon";
-  return "Good evening";
-}

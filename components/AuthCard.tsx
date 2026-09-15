@@ -18,8 +18,7 @@ export default function AuthCard({ mode }: { mode: "login" | "signup" }) {
   // The public deployment runs in demo mode and ships a seeded account, so it
   // offers a one-click sign-in. Self-hosted instances with a real API key leave
   // NEXT_PUBLIC_DEMO_MODE unset and get the normal login form only.
-  const showDemoLogin =
-    !isSignup && process.env.NEXT_PUBLIC_DEMO_MODE === "true";
+  const showDemoLogin = !isSignup && process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
   async function signInAsDemo() {
     setError("");
@@ -30,7 +29,7 @@ export default function AuthCard({ mode }: { mode: "login" | "signup" }) {
       redirect: false,
     });
     if (result?.error) {
-      setError("Demo account unavailable — has the database been seeded?");
+      setError("The demo account isn't available — has the database been seeded?");
       setDemoLoading(false);
       return;
     }
@@ -59,7 +58,7 @@ export default function AuthCard({ mode }: { mode: "login" | "signup" }) {
       const result = await signIn("credentials", { email, password, redirect: false });
       setLoading(false);
       if (result?.error) {
-        setError(isSignup ? "Account created — try signing in" : "Invalid email or password");
+        setError(isSignup ? "Account created — try signing in" : "That email and password don't match");
         if (isSignup) router.push("/login");
       } else {
         router.push("/dashboard");
@@ -71,75 +70,75 @@ export default function AuthCard({ mode }: { mode: "login" | "signup" }) {
     }
   }
 
-  const tab = (active: boolean) =>
-    `flex-1 rounded-[8px] py-2 text-[13px] font-semibold transition-colors ${
-      active ? "bg-elevated text-white" : "text-ink-2 hover:text-ink"
-    }`;
-
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center px-6">
-      <div className="mb-7 flex items-center gap-[11px]">
-        <div className="flex h-[34px] w-[34px] items-center justify-center rounded-[10px] bg-primary">
-          <div className="h-3 w-3 rotate-45 rounded-[3px] border-[2.5px] border-white" />
+    <div className="mx-auto flex min-h-screen max-w-[1160px] flex-col px-8">
+      <header className="flex h-[56px] items-center">
+        <span className="display text-[22px] leading-none">Goal Planner</span>
+      </header>
+
+      <div className="grid flex-1 grid-cols-1 items-center gap-16 py-16 lg:grid-cols-[1.2fr_1fr]">
+        {/* Pitch */}
+        <div>
+          <h1 className="display text-[56px] leading-[1.02]">
+            A goal becomes a roadmap.
+            <br />
+            The roadmap becomes <em>this week</em>.
+          </h1>
+          <p className="mt-6 max-w-[520px] text-[17px] leading-[1.55] text-ink-2">
+            State what you want to achieve. It&apos;s broken into milestones, and each week the next
+            concrete steps are placed into the hours you&apos;re actually free — then re-planned when
+            life moves things around.
+          </p>
         </div>
-        <span className="text-[19px] font-bold tracking-[-0.01em]">Goal Planner</span>
-      </div>
 
-      <div className="w-full max-w-[400px] rounded-[18px] border border-[rgba(255,255,255,0.07)] bg-[#121217] p-[26px]">
-        <div className="mb-[22px] flex gap-1 rounded-[11px] border border-[rgba(255,255,255,0.06)] bg-[#0b0b0e] p-1">
-          <Link href="/login" className={tab(!isSignup)}>Sign in</Link>
-          <Link href="/signup" className={tab(isSignup)}>Sign up</Link>
-        </div>
+        {/* Form */}
+        <div className="w-full max-w-[380px] lg:ml-auto">
+          <div className="flex gap-5 border-b border-rule text-[14px]">
+            <Link href="/login" className={`-mb-px border-b pb-3 ${!isSignup ? "border-ink text-ink" : "border-transparent text-ink-3 hover:text-ink"}`}>Sign in</Link>
+            <Link href="/signup" className={`-mb-px border-b pb-3 ${isSignup ? "border-ink text-ink" : "border-transparent text-ink-3 hover:text-ink"}`}>Create account</Link>
+          </div>
 
-        <div className="mb-1 text-[20px] font-bold tracking-[-0.01em]">{isSignup ? "Create your account" : "Welcome back"}</div>
-        <div className="mb-5 text-[13.5px] text-ink-3">Plan goals into a roadmap and a daily schedule.</div>
+          {error && <p className="mt-5 text-[13.5px] text-danger">{error}</p>}
 
-        {error && <div className="mb-4 rounded-[10px] border border-red-500/20 bg-red-500/10 px-3 py-2.5 text-[13px] text-red-400">{error}</div>}
-
-        {showDemoLogin && (
-          <>
-            <button
-              type="button"
-              onClick={signInAsDemo}
-              disabled={demoLoading || loading}
-              className="mb-2 w-full rounded-[11px] bg-primary py-3 text-[14.5px] font-semibold text-white transition-colors hover:bg-primary-hover disabled:opacity-40"
-            >
-              {demoLoading ? "Signing in…" : "Explore the demo"}
-            </button>
-            <div className="mb-5 text-center text-[12px] text-ink-4">
-              Loads a populated account — no signup needed
+          {showDemoLogin && (
+            <div className="mt-6">
+              <button type="button" onClick={signInAsDemo} disabled={demoLoading || loading} className="btn w-full py-[10px]">
+                {demoLoading ? "Signing in…" : "Look around the demo"}
+              </button>
+              <p className="mt-2 text-center text-[12.5px] text-ink-3">
+                A populated account — four goals, a few weeks of history. No signup.
+              </p>
+              <div className="my-6 flex items-center gap-3">
+                <div className="h-px flex-1 bg-rule" />
+                <span className="text-[11px] uppercase tracking-[0.08em] text-ink-4">or</span>
+                <div className="h-px flex-1 bg-rule" />
+              </div>
             </div>
-            <div className="mb-5 flex items-center gap-3">
-              <div className="h-px flex-1 bg-[rgba(255,255,255,0.07)]" />
-              <span className="text-[11.5px] uppercase tracking-wide text-ink-4">or</span>
-              <div className="h-px flex-1 bg-[rgba(255,255,255,0.07)]" />
-            </div>
-          </>
-        )}
-
-        <form onSubmit={submit}>
-          {isSignup && (
-            <>
-              <div className="label">Name</div>
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Alex Rivera" autoComplete="name" className="field mb-[14px]" />
-            </>
           )}
-          <div className="label">Email</div>
-          <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" autoComplete="email" className="field mb-[14px]" />
-          <div className="label">Password</div>
-          <input type="password" required minLength={isSignup ? 6 : undefined} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" autoComplete={isSignup ? "new-password" : "current-password"} className="field mb-5" />
-          <button type="submit" disabled={loading} className="w-full rounded-[11px] bg-primary py-3 text-[14.5px] font-semibold text-white transition-colors hover:bg-primary-hover disabled:opacity-40">
-            {loading ? "Please wait…" : isSignup ? "Create account" : "Sign in"}
-          </button>
-        </form>
-      </div>
 
-      {showDemoLogin && (
-        <div className="mt-[18px] text-[12.5px] text-ink-4">
-          Or sign in manually with <span className="font-mono">demo@example.com</span> /{" "}
-          <span className="font-mono">demo123</span>
+          <form onSubmit={submit} className={showDemoLogin ? "" : "mt-6"}>
+            {isSignup && (
+              <>
+                <label className="label" htmlFor="name">Name</label>
+                <input id="name" value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" className="field mb-4" />
+              </>
+            )}
+            <label className="label" htmlFor="email">Email</label>
+            <input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" className="field mb-4" />
+            <label className="label" htmlFor="password">Password</label>
+            <input id="password" type="password" required minLength={isSignup ? 6 : undefined} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={isSignup ? "new-password" : "current-password"} className="field mb-5" />
+            <button type="submit" disabled={loading} className={`${showDemoLogin ? "btn-ghost" : "btn"} w-full py-[10px]`}>
+              {loading ? "One moment…" : isSignup ? "Create account" : "Sign in"}
+            </button>
+          </form>
+
+          {showDemoLogin && (
+            <p className="mt-4 text-[12.5px] text-ink-4">
+              Or sign in as <span className="font-mono">demo@example.com</span> / <span className="font-mono">demo123</span>
+            </p>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

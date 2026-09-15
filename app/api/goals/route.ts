@@ -7,6 +7,7 @@ import { generateRoadmap } from "@/lib/agents/architect";
 import { getWeekRange } from "@/lib/dates";
 import type { Clarification } from "@/lib/agents/schemas";
 import { serializeGoalTasks } from "@/lib/tasks";
+import { pickHue } from "@/lib/colors";
 
 // List the user's goals with their roadmap and this week's tasks.
 export async function GET() {
@@ -50,11 +51,20 @@ export async function POST(request: Request) {
   const { data: roadmap, source: roadmapSource } = await generateRoadmap(goal, qaList);
   const title = goal.length > 60 ? goal.slice(0, 57) + "…" : goal;
 
+  // Color is assigned relative to the goals that already exist, so it is
+  // decided here rather than derived later from the id.
+  const siblings = await prisma.goal.findMany({
+    where: { userId: session.user.id },
+    select: { hue: true },
+  });
+  const hue = pickHue(siblings.map((g) => g.hue));
+
   const created = await prisma.goal.create({
     data: {
       title,
       goal,
       clarifications: qaList as unknown as Prisma.InputJsonValue,
+      hue,
       userId: session.user.id,
       milestones: {
         create: roadmap.milestones

@@ -1,5 +1,13 @@
 import type { Config } from "tailwindcss";
 
+/**
+ * Design tokens.
+ *
+ * One light theme on warm paper. The interface itself is monochrome — ink on
+ * paper, hairline rules — and the only color anywhere comes from goal hues
+ * (lib/colors.ts). That restraint is the point: when four things are colored,
+ * you can tell them apart; when everything is, nothing stands out.
+ */
 const config: Config = {
   content: [
     "./pages/**/*.{js,ts,jsx,tsx,mdx}",
@@ -9,29 +17,33 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        // Design tokens (see handoff README)
-        bg: "#0a0a0c",
-        sidebar: "#0c0c0f",
-        card: "#141419",
-        "card-2": "#101014",
-        field: "#0d0d11",
-        "task-card": "#16161c",
-        elevated: "#1c1c24",
-        primary: {
-          DEFAULT: "#6d56f0",
-          hover: "#7d68ff",
-          soft: "rgba(109,86,240,0.15)",
+        paper: {
+          DEFAULT: "#f6f3ec",
+          2: "#eeeae0",
+          3: "#e6e1d5",
+        },
+        surface: "#fffdf9",
+        rule: {
+          DEFAULT: "rgba(28,25,20,0.10)",
+          2: "rgba(28,25,20,0.20)",
         },
         ink: {
-          DEFAULT: "#f4f4f5",
-          2: "#a1a1aa",
-          3: "#71717a",
-          4: "#52525b",
+          DEFAULT: "#1c1915",
+          2: "#58534b",
+          3: "#8b857a",
+          4: "#b8b2a6",
         },
+        danger: "#b4483a",
       },
       fontFamily: {
         sans: ["var(--font-sans)", "system-ui", "sans-serif"],
         mono: ["var(--font-mono)", "ui-monospace", "monospace"],
+        display: ["var(--font-display)", "Georgia", "serif"],
+      },
+      borderRadius: {
+        sm: "4px",
+        DEFAULT: "6px",
+        md: "8px",
       },
     },
   },

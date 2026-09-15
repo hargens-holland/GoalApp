@@ -12,6 +12,7 @@ import CompactTaskList, { type CompactTask } from "@/components/CompactTaskList"
 import RoadmapTimeline from "@/components/RoadmapTimeline";
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const MON_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export default async function GoalDetailPage({ params }: { params: { id: string } }) {
   const session = await getServerSession(authOptions);
@@ -48,13 +49,18 @@ export default async function GoalDetailPage({ params }: { params: { id: string 
     if (isDone(t.status)) c.done++;
     rateByWeek.set(key, c);
   }
-  const history: (number | null)[] = [];
+  const history: { label: string; done: number; total: number }[] = [];
   for (let i = 7; i >= 0; i--) {
     const d = new Date();
     d.setUTCDate(d.getUTCDate() - i * 7);
     const { weekNumber, year } = getWeekInfo(d);
-    const c = rateByWeek.get(`${year}-${String(weekNumber).padStart(2, "0")}`);
-    history.push(c && c.total ? c.done / c.total : null);
+    const c = rateByWeek.get(`${year}-${String(weekNumber).padStart(2, "0")}`) ?? { total: 0, done: 0 };
+    const monday = getWeekRange(d).start;
+    history.push({
+      label: `${MON_SHORT[monday.getUTCMonth()]} ${monday.getUTCDate()}`,
+      done: c.done,
+      total: c.total,
+    });
   }
 
   const weekTasks: CompactTask[] = goal.tasks.map((t) => ({
@@ -117,23 +123,37 @@ export default async function GoalDetailPage({ params }: { params: { id: string 
             </div>
 
             <div className="mt-6 flex items-baseline justify-between">
-              <span className="eyebrow">Weekly completion</span>
-              <span className="font-mono text-[10.5px] text-ink-4">8 wks</span>
+              <span className="eyebrow">Tasks done each week</span>
+              <span className="font-mono text-[10.5px] text-ink-4">last 8</span>
             </div>
-            <div className="mt-3 flex h-[56px] items-end gap-[5px]">
-              {history.map((rate, i) => (
-                <div key={i} className="flex flex-1 flex-col justify-end" style={{ height: "100%" }}>
-                  {rate == null ? (
-                    <div className="h-px bg-paper-3" />
-                  ) : (
-                    <div
-                      className="rounded-sm"
-                      style={{ height: `${Math.max(3, rate * 56)}px`, background: color, opacity: i === history.length - 1 ? 1 : 0.55 }}
-                    />
-                  )}
-                </div>
-              ))}
+            {/* Each column: share done as a number, a bar to the same scale, the week's Monday. */}
+            <div className="mt-3 grid grid-cols-8 gap-[5px]">
+              {history.map((w, i) => {
+                const rate = w.total ? w.done / w.total : null;
+                const current = i === history.length - 1;
+                return (
+                  <div key={w.label} className="flex flex-col" title={w.total ? `${w.done} of ${w.total} done, week of ${w.label}` : `No tasks, week of ${w.label}`}>
+                    <div className={`text-center font-mono text-[10.5px] ${current ? "text-ink" : "text-ink-3"}`}>
+                      {rate == null ? "–" : `${Math.round(rate * 100)}`}
+                    </div>
+                    <div className="mt-1 flex h-[48px] items-end">
+                      {rate == null ? (
+                        <div className="w-full border-t border-dashed border-ink-4" />
+                      ) : (
+                        <div
+                          className="w-full rounded-sm"
+                          style={{ height: `${Math.max(2, rate * 48)}px`, background: color, opacity: current ? 1 : 0.5 }}
+                        />
+                      )}
+                    </div>
+                    <div className={`mt-[6px] truncate text-center font-mono text-[9.5px] ${current ? "text-ink-2" : "text-ink-4"}`}>
+                      {current ? "now" : w.label}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
+            <p className="mt-2 text-right text-[11px] text-ink-4">% of scheduled tasks completed</p>
           </section>
 
           <section>

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { PatchGoalBody, parseBody } from "@/lib/validation";
 import { getWeekRange } from "@/lib/dates";
 import { serializeGoalTasks } from "@/lib/tasks";
 
@@ -46,11 +47,9 @@ export async function PUT(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const body = (await request.json()) as {
-    title?: string;
-    goal?: string;
-    status?: string;
-  };
+  const parsed = await parseBody(request, PatchGoalBody);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
   const updated = await prisma.goal.update({
     where: { id: params.id },
     data: {

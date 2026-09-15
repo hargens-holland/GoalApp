@@ -5,6 +5,7 @@ import Link from "next/link";
 import { goalColor, goalInk, goalSoft } from "@/lib/colors";
 import { dateLabel, minutesToHHMM, timeFromISO, weekRangeLabel } from "@/lib/format";
 import { useToast } from "./Toast";
+import { LIMITS } from "@/lib/validation";
 
 /**
  * THE WEEK
@@ -549,6 +550,7 @@ function TaskRow({
               onChange={(e) => setDraft(e.target.value)}
               onBlur={() => draft !== (task.notes ?? "") && onNote(draft)}
               placeholder="How did it go? The weekly review reads this."
+              maxLength={LIMITS.notes}
               className="field mt-2 min-h-[64px] resize-y text-[13.5px]"
               autoFocus
             />

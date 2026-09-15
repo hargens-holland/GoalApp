@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { LIMITS } from "@/lib/validation";
 
 type Step = 0 | 1 | 2;
 
@@ -128,6 +129,7 @@ export default function ChatUI() {
             onChange={(e) => setGoal(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) start(); }}
             placeholder="Play three fingerstyle guitar songs from memory by December"
+            maxLength={LIMITS.goal}
             className="field mt-7 min-h-[120px] resize-y text-[17px] leading-[1.5]"
             autoFocus
           />
@@ -151,6 +153,7 @@ export default function ChatUI() {
             onChange={(e) => setAnswer(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) advance(answer); }}
             placeholder="A sentence is plenty"
+            maxLength={LIMITS.answer}
             className="field mt-7 min-h-[100px] resize-y text-[16px] leading-[1.5]"
             autoFocus
           />

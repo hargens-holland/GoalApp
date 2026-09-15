@@ -3,12 +3,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
-import {
-  completionUpdate,
-  isDone,
-  serializeTask,
-  type TaskStatus,
-} from "@/lib/tasks";
+import { PatchTaskBody, parseBody } from "@/lib/validation";
+import { completionUpdate, isDone, serializeTask } from "@/lib/tasks";
 
 async function ownsTask(userId: string, taskId: string) {
   const task = await prisma.task.findUnique({
@@ -31,12 +27,9 @@ export async function PATCH(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const body = (await request.json()) as {
-    completed?: boolean;
-    status?: TaskStatus;
-    notes?: string;
-    metadata?: unknown;
-  };
+  const parsed = await parseBody(request, PatchTaskBody);
+  if (!parsed.ok) return parsed.response;
+  const body = parsed.data;
 
   // `status` is the underlying field; `completed` is the convenience form most
   // clients send. An explicit status wins, since it can express "skipped".
@@ -54,7 +47,8 @@ export async function PATCH(
     where: { id: params.id },
     data: {
       ...completionFields,
-      ...(body.notes !== undefined ? { notes: body.notes } : {}),
+      // An empty string clears the note, same as null.
+      ...(body.notes !== undefined ? { notes: body.notes || null } : {}),
       ...(body.metadata !== undefined
         ? { metadata: body.metadata as Prisma.InputJsonValue }
         : {}),

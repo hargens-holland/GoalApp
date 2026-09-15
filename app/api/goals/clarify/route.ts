@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { generateClarifyingQuestions } from "@/lib/agents/architect";
+import { ClarifyBody, parseBody } from "@/lib/validation";
 
 export async function POST(request: Request) {
   const session = await getServerSession(authOptions);
@@ -9,10 +10,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { goal } = (await request.json()) as { goal?: string };
-  if (!goal?.trim()) {
-    return NextResponse.json({ error: "goal is required" }, { status: 400 });
-  }
+  const parsed = await parseBody(request, ClarifyBody);
+  if (!parsed.ok) return parsed.response;
+  const { goal } = parsed.data;
 
   const { data: questions, source } = await generateClarifyingQuestions(goal, { userId: session.user.id });
   return NextResponse.json({ questions, source });

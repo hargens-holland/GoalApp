@@ -124,7 +124,7 @@ export default function AuthCard({ mode }: { mode: "login" | "signup" }) {
             <label className="label" htmlFor="email">Email</label>
             <input id="email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" className="field mb-4" />
             <label className="label" htmlFor="password">Password</label>
-            <input id="password" type="password" required minLength={isSignup ? 6 : undefined} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={isSignup ? "new-password" : "current-password"} className="field mb-5" />
+            <input id="password" type="password" required minLength={isSignup ? 10 : undefined} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={isSignup ? "new-password" : "current-password"} className="field mb-5" />
             <button type="submit" disabled={loading} className={`${showDemoLogin ? "btn-ghost" : "btn"} w-full py-[10px]`}>
               {loading ? "One moment…" : isSignup ? "Create account" : "Sign in"}
             </button>

@@ -8,6 +8,7 @@ import { getWeekRange } from "@/lib/dates";
 import type { Clarification } from "@/lib/agents/schemas";
 import { serializeGoalTasks } from "@/lib/tasks";
 import { pickHue } from "@/lib/colors";
+import { CreateGoalBody, parseBody } from "@/lib/validation";
 
 // List the user's goals with their roadmap and this week's tasks.
 export async function GET() {
@@ -36,15 +37,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { goal, clarifications } = (await request.json()) as {
-    goal?: string;
-    clarifications?: Clarification[];
-  };
-  if (!goal?.trim()) {
-    return NextResponse.json({ error: "goal is required" }, { status: 400 });
-  }
+  const parsed = await parseBody(request, CreateGoalBody);
+  if (!parsed.ok) return parsed.response;
+  const { goal, clarifications } = parsed.data;
 
-  const qaList = clarifications ?? [];
+  const qaList: Clarification[] = clarifications;
   // Never throws: falls back to deterministic planning if the model is
   // unavailable, so goal creation always succeeds. `source` tells the client
   // whether this plan was model-generated.

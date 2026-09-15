@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { getWeekRange } from "@/lib/dates";
 import { serializeTask } from "@/lib/tasks";
 import { getAvailability, runScheduler } from "@/lib/scheduling";
+import { LIMITS, ScheduleBody, intParam, parseBody } from "@/lib/validation";
 
 function rangeForOffset(weekOffset: number) {
   const base = new Date();
@@ -18,10 +19,8 @@ export async function GET(request: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const weekOffset = Number(
-    new URL(request.url).searchParams.get("weekOffset") ?? "0"
-  );
-  const { start, end } = rangeForOffset(Number.isFinite(weekOffset) ? weekOffset : 0);
+  const weekOffset = intParam(request.url, "weekOffset", 0, -LIMITS.weekOffset, LIMITS.weekOffset);
+  const { start, end } = rangeForOffset(weekOffset);
 
   const [tasks, availability] = await Promise.all([
     prisma.task.findMany({
@@ -49,10 +48,9 @@ export async function POST(request: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const { weekOffset } = (await request.json().catch(() => ({}))) as {
-    weekOffset?: number;
-  };
-  const { start, end } = rangeForOffset(weekOffset ?? 0);
+  const parsed = await parseBody(request, ScheduleBody);
+  if (!parsed.ok) return parsed.response;
+  const { start, end } = rangeForOffset(parsed.data.weekOffset);
 
   const result = await runScheduler(session.user.id, start, end);
   return NextResponse.json(result);

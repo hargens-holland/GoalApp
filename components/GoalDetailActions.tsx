@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "./Toast";
+import { LIMITS } from "@/lib/validation";
 
 /**
  * The two ways a user changes a goal after creation: ask for a weekly review
@@ -68,6 +69,7 @@ export default function GoalDetailActions({ goalId }: { goalId: string }) {
             value={request}
             onChange={(e) => setRequest(e.target.value)}
             placeholder="What should change? e.g. “I have half the time I thought — stretch this over six months.”"
+            maxLength={LIMITS.request}
             className="field min-h-[80px] resize-y text-[13.5px]"
             autoFocus
           />

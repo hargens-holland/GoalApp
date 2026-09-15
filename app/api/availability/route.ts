@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { PutAvailabilityBody, parseBody } from "@/lib/validation";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -21,17 +22,9 @@ export async function PUT(request: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const { windows } = (await request.json()) as {
-    windows?: Array<{ dayOfWeek: number; startMinute: number; endMinute: number }>;
-  };
-  const clean = (windows ?? []).filter(
-    (w) =>
-      w.dayOfWeek >= 0 &&
-      w.dayOfWeek <= 6 &&
-      w.endMinute > w.startMinute &&
-      w.startMinute >= 0 &&
-      w.endMinute <= 1440
-  );
+  const parsed = await parseBody(request, PutAvailabilityBody);
+  if (!parsed.ok) return parsed.response;
+  const clean = parsed.data.windows;
 
   await prisma.$transaction([
     prisma.availability.deleteMany({ where: { userId: session.user.id } }),

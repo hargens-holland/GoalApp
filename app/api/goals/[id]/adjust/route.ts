@@ -6,6 +6,7 @@ import { adjustRoadmap } from "@/lib/agents/architect";
 import { getWeekRange } from "@/lib/dates";
 import { serializeGoalTasks } from "@/lib/tasks";
 import { runScheduler } from "@/lib/scheduling";
+import { AdjustGoalBody, parseBody } from "@/lib/validation";
 
 /**
  * The "editor". scope="roadmap" → Architect revises the milestones, then the
@@ -29,10 +30,9 @@ export async function POST(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const { request: req, scope } = (await request.json()) as {
-    request?: string;
-    scope?: "roadmap" | "week";
-  };
+  const parsed = await parseBody(request, AdjustGoalBody);
+  if (!parsed.ok) return parsed.response;
+  const { request: req, scope } = parsed.data;
 
   if (scope === "roadmap") {
     if (!req?.trim()) {

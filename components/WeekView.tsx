@@ -69,10 +69,11 @@ interface Props {
 // Geometry
 // ---------------------------------------------------------------------------
 
-/** Vertical scale of the grid. 5 hours of availability ≈ 330px. */
-const PX_PER_MINUTE = 1.1;
+/** Vertical scale of the grid. 5 hours of availability ≈ 375px; a 30-minute
+ *  task is tall enough for its time and a full-width title line. */
+const PX_PER_MINUTE = 1.25;
 /** Shortest block that still fits a line of text. */
-const MIN_BLOCK_PX = 22;
+const MIN_BLOCK_PX = 24;
 
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -303,7 +304,7 @@ export default function WeekView({ initial, goals, streak, todayISO }: Props) {
                 className="absolute right-2 -translate-y-1/2 font-mono text-[10.5px] text-ink-4"
                 style={{ top: (m - lo) * PX_PER_MINUTE }}
               >
-                {m === lo || m === hi ? null : minutesToHHMM(m)}
+                {m === hi ? null : minutesToHHMM(m)}
               </div>
             ))}
           </div>
@@ -336,7 +337,11 @@ export default function WeekView({ initial, goals, streak, todayISO }: Props) {
                   if (s == null || e == null) return null;
                   const top = (s - lo) * PX_PER_MINUTE;
                   const height = Math.max(MIN_BLOCK_PX, (e - s) * PX_PER_MINUTE);
-                  const tall = height >= 40;
+                  // From ~34px the time gets its own line; from ~48px the
+                  // title can wrap to two. Below that, time and title share
+                  // one line. Hovering always shows the full title.
+                  const tall = height >= 34;
+                  const twoLines = height >= 48;
                   return (
                     <button
                       key={t.id}
@@ -353,17 +358,29 @@ export default function WeekView({ initial, goals, streak, todayISO }: Props) {
                       }}
                     >
                       <div className="px-[7px] py-[3px]">
-                        {tall && (
-                          <div className="font-mono text-[10px] leading-[1.2] opacity-80">
-                            {timeFromISO(t.scheduledStart)}
+                        {tall ? (
+                          <>
+                            <div className="font-mono text-[10px] leading-[1.2] opacity-80">
+                              {timeFromISO(t.scheduledStart)}
+                            </div>
+                            <div
+                              className={`${twoLines ? "line-clamp-2" : "truncate"} text-[12px] font-medium leading-[1.25]`}
+                              style={{ textDecoration: t.completed ? "line-through" : "none" }}
+                            >
+                              {t.title}
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex items-baseline gap-[5px] text-[12px] leading-[1.3]">
+                            <span className="flex-shrink-0 font-mono text-[10px] opacity-80">{timeFromISO(t.scheduledStart)}</span>
+                            <span
+                              className="truncate font-medium"
+                              style={{ textDecoration: t.completed ? "line-through" : "none" }}
+                            >
+                              {t.title}
+                            </span>
                           </div>
                         )}
-                        <div
-                          className="truncate text-[12px] font-medium leading-[1.25]"
-                          style={{ textDecoration: t.completed ? "line-through" : "none" }}
-                        >
-                          {t.title}
-                        </div>
                       </div>
                     </button>
                   );
@@ -506,7 +523,7 @@ function TaskRow({
   const color = goalColor(task.goal.hue);
 
   return (
-    <div className="row">
+    <div className="row group">
       <div className="flex items-start gap-3 py-[12px]">
         <button
           onClick={onToggle}
@@ -544,7 +561,9 @@ function TaskRow({
           </span>
           <button
             onClick={() => setOpen((v) => !v)}
-            className={`text-[12.5px] underline-offset-[3px] hover:underline ${task.notes ? "text-ink" : "text-ink-3"}`}
+            className={`text-[12.5px] underline-offset-[3px] transition-opacity hover:underline focus-visible:opacity-100 ${
+              task.notes || open ? "text-ink opacity-100" : "text-ink-3 opacity-0 group-hover:opacity-100"
+            }`}
           >
             {task.notes ? "Note" : "Add note"}
           </button>

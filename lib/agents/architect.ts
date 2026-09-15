@@ -1,5 +1,13 @@
 import { generate, type AgentOutcome } from "./client";
 import { UNTRUSTED_NOTICE, untrusted } from "./prompt";
+import { modelFor } from "./models";
+
+/** Per-call options shared by the Architect's entry points. */
+export interface ArchitectOptions {
+  userId?: string;
+  /** Override the configured model, e.g. from an eval run. */
+  model?: string;
+}
 import {
   ClarifyingQuestionsSchema,
   RoadmapSchema,
@@ -81,10 +89,11 @@ const FALLBACK_QUESTIONS = [
 /** Three questions used to personalize the roadmap before it is generated. */
 export async function generateClarifyingQuestions(
   goal: string,
-  opts: { userId?: string } = {}
+  opts: ArchitectOptions = {}
 ): Promise<AgentOutcome<string[]>> {
   const outcome = await generate({
     label: "architect.clarify",
+    model: opts.model ?? modelFor("architect"),
     userId: opts.userId,
     maxTokens: 512,
     schema: ClarifyingQuestionsSchema,
@@ -107,7 +116,7 @@ statement alone — current level, time available, constraints, or deadline.`,
 export async function generateRoadmap(
   goal: string,
   clarifications: Clarification[],
-  opts: { userId?: string } = {}
+  opts: ArchitectOptions = {}
 ): Promise<AgentOutcome<Roadmap>> {
   const context = clarifications.length
     ? untrusted(clarifications.map((c) => `Q: ${c.question}\nA: ${c.answer}`).join("\n\n"))
@@ -115,6 +124,7 @@ export async function generateRoadmap(
 
   return generate({
     label: "architect.roadmap",
+    model: opts.model ?? modelFor("architect"),
     userId: opts.userId,
     maxTokens: 2048,
     schema: RoadmapSchema,
@@ -141,7 +151,7 @@ export async function adjustRoadmap(
   goal: string,
   milestones: Array<{ title: string; description: string; order: number }>,
   request: string,
-  opts: { userId?: string } = {}
+  opts: ArchitectOptions = {}
 ): Promise<AgentOutcome<Roadmap>> {
   const current = milestones
     .map((m) => `${m.order}. ${m.title}: ${m.description}`)
@@ -149,6 +159,7 @@ export async function adjustRoadmap(
 
   return generate({
     label: "architect.adjust",
+    model: opts.model ?? modelFor("architect"),
     userId: opts.userId,
     maxTokens: 2048,
     schema: RoadmapSchema,

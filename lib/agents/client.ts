@@ -20,8 +20,7 @@ import { recordAgentCall } from "./telemetry";
 // Configuration
 // ---------------------------------------------------------------------------
 
-/** Model used for every agent call. Structured outputs require Opus 4.5+. */
-export const MODEL = process.env.ANTHROPIC_MODEL ?? "claude-opus-4-8";
+// The model is chosen per call — see models.ts for which agent uses what.
 
 /**
  * Per-request ceiling. Roadmap and schedule generation are genuinely slow
@@ -163,6 +162,7 @@ function classifyError(error: unknown): FallbackReason {
  */
 function logOutcome(
   label: string,
+  model: string,
   outcome: AgentOutcome<unknown>,
   usage: CallUsage,
   latencyMs: number,
@@ -176,12 +176,12 @@ function logOutcome(
   // logs at info; a genuine failure is a warning worth alerting on.
   const level =
     outcome.source === "llm" || outcome.reason === "demo_mode" ? "info" : "warn";
-  console[level === "info" ? "log" : "warn"](`[agent:${label}] ${detail}`);
+  console[level === "info" ? "log" : "warn"](`[agent:${label}] model=${model} ${detail}`);
 
   // The durable copy. Never throws, never awaited — see telemetry.ts.
   recordAgentCall({
     label,
-    model: MODEL,
+    model,
     source: outcome.source,
     reason: outcome.reason,
     attempts: outcome.attempts,
@@ -198,6 +198,8 @@ function logOutcome(
 export interface GenerateOptions<T> {
   /** Short identifier used in logs, e.g. "architect.roadmap". */
   label: string;
+  /** Model id for this call. Agents get theirs from models.ts. */
+  model: string;
   /** The fully-rendered user prompt. */
   prompt: string;
   /** Schema the response is constrained to and validated against. */
@@ -219,6 +221,7 @@ export interface GenerateOptions<T> {
  */
 export async function generate<T>({
   label,
+  model,
   prompt,
   schema,
   maxTokens,
@@ -235,7 +238,7 @@ export async function generate<T>({
       reason: "demo_mode",
       attempts: 0,
     };
-    logOutcome(label, outcome, usage, Date.now() - startedAt, userId);
+    logOutcome(label, model, outcome, usage, Date.now() - startedAt, userId);
     return outcome;
   }
 
@@ -246,7 +249,7 @@ export async function generate<T>({
     attempts++;
     try {
       const message = await getClient().messages.parse({
-        model: MODEL,
+        model,
         max_tokens: maxTokens,
         messages: [{ role: "user", content: prompt }],
         // Constrains generation to the schema rather than merely requesting it.
@@ -283,7 +286,7 @@ export async function generate<T>({
         source: "llm",
         attempts,
       };
-      logOutcome(label, outcome, usage, Date.now() - startedAt, userId);
+      logOutcome(label, model, outcome, usage, Date.now() - startedAt, userId);
       return outcome;
     } catch (error) {
       reason = classifyError(error);
@@ -303,6 +306,6 @@ export async function generate<T>({
     reason,
     attempts,
   };
-  logOutcome(label, outcome, usage, Date.now() - startedAt, userId);
+  logOutcome(label, model, outcome, usage, Date.now() - startedAt, userId);
   return outcome;
 }

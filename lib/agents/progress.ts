@@ -1,5 +1,6 @@
 import { generate, type AgentOutcome } from "./client";
 import { UNTRUSTED_NOTICE, untrusted } from "./prompt";
+import { modelFor } from "./models";
 import { ProgressAssessmentSchema, type ProgressAssessment } from "./schemas";
 
 /**
@@ -91,7 +92,7 @@ export async function assessProgress(
   goal: string,
   milestones: MilestoneInput[],
   completions: CompletionInput[],
-  opts: { userId?: string } = {}
+  opts: { userId?: string; model?: string } = {}
 ): Promise<AgentOutcome<ProgressAssessment>> {
   const roadmap = [...milestones]
     .sort((a, b) => a.order - b.order)
@@ -116,6 +117,7 @@ export async function assessProgress(
 
   const outcome = await generate({
     label: "progress.assess",
+    model: opts.model ?? modelFor("progress"),
     userId: opts.userId,
     maxTokens: 1024,
     schema: ProgressAssessmentSchema,

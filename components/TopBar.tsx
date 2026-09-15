@@ -9,10 +9,11 @@ import { signOut } from "next-auth/react";
  * action. Goals are reached from the week page rather than a persistent list,
  * so the calendar gets the full width.
  */
-export default function TopBar({ userName }: { userName: string | null | undefined }) {
+export default function TopBar({ userName, isAdmin }: { userName: string | null | undefined; isAdmin: boolean }) {
   const pathname = usePathname();
   const onWeek = pathname === "/dashboard" || pathname.startsWith("/goals/");
   const onAvailability = pathname.startsWith("/settings");
+  const onAdmin = pathname.startsWith("/admin");
 
   const navClass = (active: boolean) =>
     `text-[14px] transition-colors ${active ? "text-ink" : "text-ink-3 hover:text-ink"}`;
@@ -26,6 +27,7 @@ export default function TopBar({ userName }: { userName: string | null | undefin
         <nav className="flex items-center gap-5">
           <Link href="/dashboard" className={navClass(onWeek)}>Week</Link>
           <Link href="/settings/availability" className={navClass(onAvailability)}>Availability</Link>
+          {isAdmin && <Link href="/admin/usage" className={navClass(onAdmin)}>Usage</Link>}
         </nav>
         <div className="flex-1" />
         <Link href="/goals/new" className="btn">New goal</Link>

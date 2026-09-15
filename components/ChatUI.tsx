@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type Step = 0 | 1 | 2;
@@ -21,6 +21,11 @@ export default function ChatUI() {
   const [loadingQuestions, setLoadingQuestions] = useState(false);
   /** Which half of the two-request build is in flight, for the progress copy. */
   const [phase, setPhase] = useState<"roadmap" | "schedule">("roadmap");
+  // Read on the client after mount so the server render matches the first paint.
+  const [modKey, setModKey] = useState("Ctrl");
+  useEffect(() => {
+    if (/Mac|iPhone|iPad/.test(navigator.platform) || /Mac/.test(navigator.userAgent)) setModKey("⌘");
+  }, []);
 
   async function start() {
     if (goal.trim().length < 4) return;
@@ -127,7 +132,7 @@ export default function ChatUI() {
             autoFocus
           />
           <div className="mt-5 flex items-center justify-between">
-            <span className="text-[12.5px] text-ink-4">⌘↵ to continue</span>
+            <span className="text-[12.5px] text-ink-4">{modKey}{modKey === "⌘" ? "" : "+"}↵ to continue</span>
             <button onClick={start} disabled={goal.trim().length < 4 || loadingQuestions} className="btn">
               {loadingQuestions ? "One moment…" : "Continue"}
             </button>

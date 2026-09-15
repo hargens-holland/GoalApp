@@ -79,10 +79,8 @@ export default function AuthCard({ mode }: { mode: "login" | "signup" }) {
       <div className="grid flex-1 grid-cols-1 items-center gap-16 py-16 lg:grid-cols-[1.2fr_1fr]">
         {/* Pitch */}
         <div>
-          <h1 className="display text-[46px] leading-[1.05]">
-            A goal becomes a roadmap.
-            <br />
-            The roadmap becomes this week.
+          <h1 className="display max-w-[520px] text-[46px] leading-[1.05] [text-wrap:balance]">
+            A goal becomes a roadmap. The roadmap becomes this week.
           </h1>
           <p className="mt-6 max-w-[520px] text-[17px] leading-[1.55] text-ink-2">
             State what you want to achieve. It&apos;s broken into milestones, and each week the next
@@ -105,8 +103,8 @@ export default function AuthCard({ mode }: { mode: "login" | "signup" }) {
               <button type="button" onClick={signInAsDemo} disabled={demoLoading || loading} className="btn w-full py-[10px]">
                 {demoLoading ? "Signing in…" : "Look around the demo"}
               </button>
-              <p className="mt-2 text-center text-[12.5px] text-ink-3">
-                A populated account — four goals, a few weeks of history. No signup.
+              <p className="mt-2 text-center text-[12.5px] text-ink-3 [text-wrap:balance]">
+                A populated account with four goals and two months of history.
               </p>
               <div className="my-6 flex items-center gap-3">
                 <div className="h-px flex-1 bg-rule" />

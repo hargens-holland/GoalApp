@@ -62,7 +62,8 @@ function day(offsetDays: number): Date {
 // ---------------------------------------------------------------------------
 
 interface Session {
-  title: string;
+  /** Static, or a function of weeks-ago (0 = this week) so a title can progress. */
+  title: string | ((weeksAgo: number) => string);
   description: string;
   minutes: number;
   /** 1 = Monday … 6 = Saturday. */
@@ -108,7 +109,8 @@ const GOALS: SeedGoal[] = [
       { title: "Easy 5K", description: "Conversational pace. Nose-breathing only.", minutes: 35, weekday: 1 },
       { title: "Intervals 6×400 m", description: "400 m hard, 90 s jog recovery.", minutes: 45, weekday: 3 },
       { title: "Easy 6K", description: "Recovery pace, keep the heart rate low.", minutes: 40, weekday: 5 },
-      { title: "Long run", description: "Conversational the whole way. Walk breaks are fine.", minutes: 80, weekday: 6 },
+      // The long run grows about a kilometre a fortnight, reaching 12K this week.
+      { title: (w) => `Long run ${12 - Math.ceil(w / 2)}K`, description: "Conversational the whole way. Walk breaks are fine.", minutes: 80, weekday: 6 },
     ],
     completionRate: 0.85,
     badWeeks: [4],
@@ -398,7 +400,7 @@ async function main() {
         list.push({
           goalId: goal.id,
           milestoneId: milestoneThen.id,
-          title: s.title,
+          title: typeof s.title === "function" ? s.title(weeksAgo) : s.title,
           description: s.description,
           date: toISODate(day(-7 * weeksAgo + (s.weekday - 1))),
           estimatedMinutes: s.minutes,
@@ -465,7 +467,7 @@ async function main() {
         thisWeek.push({
           goalId,
           milestoneId: activeMilestoneId,
-          title: s.title,
+          title: typeof s.title === "function" ? s.title(0) : s.title,
           description: s.description,
           date: toISODate(day(s.weekday - 1)),
           estimatedMinutes: s.minutes,

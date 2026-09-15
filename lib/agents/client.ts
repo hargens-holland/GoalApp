@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { z } from "zod";
+import { recordAgentCall } from "./telemetry";
 
 /**
  * The single entry point through which every agent talks to the Anthropic API.
@@ -118,6 +119,25 @@ export type AgentOutcome<T> = {
   attempts: number;
 };
 
+/** Token usage summed across every attempt of one generate() call. */
+interface CallUsage {
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheWriteTokens: number;
+}
+
+function emptyUsage(): CallUsage {
+  return { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
+}
+
+function addUsage(total: CallUsage, u: Anthropic.Usage): void {
+  total.inputTokens += u.input_tokens;
+  total.outputTokens += u.output_tokens;
+  total.cacheReadTokens += u.cache_read_input_tokens ?? 0;
+  total.cacheWriteTokens += u.cache_creation_input_tokens ?? 0;
+}
+
 /** Map a thrown SDK error to a typed reason. Order matters: subclasses first. */
 function classifyError(error: unknown): FallbackReason {
   if (error instanceof Anthropic.APIConnectionTimeoutError) return "timeout";
@@ -141,16 +161,34 @@ function classifyError(error: unknown): FallbackReason {
  * generated or fabricated by the fallback — the two produce identical-looking
  * results in the database.
  */
-function logOutcome(label: string, outcome: AgentOutcome<unknown>): void {
+function logOutcome(
+  label: string,
+  outcome: AgentOutcome<unknown>,
+  usage: CallUsage,
+  latencyMs: number,
+  userId?: string
+): void {
   const detail =
     outcome.source === "llm"
-      ? `source=llm attempts=${outcome.attempts}`
-      : `source=fallback reason=${outcome.reason} attempts=${outcome.attempts}`;
+      ? `source=llm attempts=${outcome.attempts} in=${usage.inputTokens} out=${usage.outputTokens} cache_read=${usage.cacheReadTokens} ${latencyMs}ms`
+      : `source=fallback reason=${outcome.reason} attempts=${outcome.attempts} ${latencyMs}ms`;
   // Demo mode is the normal operating state of the public deployment, so it
   // logs at info; a genuine failure is a warning worth alerting on.
   const level =
     outcome.source === "llm" || outcome.reason === "demo_mode" ? "info" : "warn";
   console[level === "info" ? "log" : "warn"](`[agent:${label}] ${detail}`);
+
+  // The durable copy. Never throws, never awaited — see telemetry.ts.
+  recordAgentCall({
+    label,
+    model: MODEL,
+    source: outcome.source,
+    reason: outcome.reason,
+    attempts: outcome.attempts,
+    latencyMs,
+    userId,
+    ...usage,
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -171,6 +209,8 @@ export interface GenerateOptions<T> {
    * produce valid output. Must always return a usable value.
    */
   fallback: () => T;
+  /** Whose request this is, for per-user cost attribution. Optional. */
+  userId?: string;
 }
 
 /**
@@ -183,7 +223,11 @@ export async function generate<T>({
   schema,
   maxTokens,
   fallback,
+  userId,
 }: GenerateOptions<T>): Promise<AgentOutcome<T>> {
+  const startedAt = Date.now();
+  const usage = emptyUsage();
+
   if (isDemoMode()) {
     const outcome: AgentOutcome<T> = {
       data: fallback(),
@@ -191,7 +235,7 @@ export async function generate<T>({
       reason: "demo_mode",
       attempts: 0,
     };
-    logOutcome(label, outcome);
+    logOutcome(label, outcome, usage, Date.now() - startedAt, userId);
     return outcome;
   }
 
@@ -208,6 +252,7 @@ export async function generate<T>({
         // Constrains generation to the schema rather than merely requesting it.
         output_config: { format: zodOutputFormat(schema) },
       });
+      addUsage(usage, message.usage);
 
       // The model declined on safety grounds. Retrying an identical prompt
       // will not change that, so fall back immediately.
@@ -238,7 +283,7 @@ export async function generate<T>({
         source: "llm",
         attempts,
       };
-      logOutcome(label, outcome);
+      logOutcome(label, outcome, usage, Date.now() - startedAt, userId);
       return outcome;
     } catch (error) {
       reason = classifyError(error);
@@ -258,6 +303,6 @@ export async function generate<T>({
     reason,
     attempts,
   };
-  logOutcome(label, outcome);
+  logOutcome(label, outcome, usage, Date.now() - startedAt, userId);
   return outcome;
 }

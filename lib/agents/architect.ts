@@ -79,10 +79,12 @@ const FALLBACK_QUESTIONS = [
 
 /** Three questions used to personalize the roadmap before it is generated. */
 export async function generateClarifyingQuestions(
-  goal: string
+  goal: string,
+  opts: { userId?: string } = {}
 ): Promise<AgentOutcome<string[]>> {
   const outcome = await generate({
     label: "architect.clarify",
+    userId: opts.userId,
     maxTokens: 512,
     schema: ClarifyingQuestionsSchema,
     prompt: `A user wants to achieve this goal: "${goal}"
@@ -100,7 +102,8 @@ statement alone — current level, time available, constraints, or deadline.`,
 /** Build the initial milestone roadmap for a goal. */
 export async function generateRoadmap(
   goal: string,
-  clarifications: Clarification[]
+  clarifications: Clarification[],
+  opts: { userId?: string } = {}
 ): Promise<AgentOutcome<Roadmap>> {
   const context = clarifications.length
     ? clarifications.map((c) => `Q: ${c.question}\nA: ${c.answer}`).join("\n\n")
@@ -108,6 +111,7 @@ export async function generateRoadmap(
 
   return generate({
     label: "architect.roadmap",
+    userId: opts.userId,
     maxTokens: 2048,
     schema: RoadmapSchema,
     fallback: () => fallbackRoadmap(goal),
@@ -129,7 +133,8 @@ Order them from 0, in the sequence they should be tackled.`,
 export async function adjustRoadmap(
   goal: string,
   milestones: Array<{ title: string; description: string; order: number }>,
-  request: string
+  request: string,
+  opts: { userId?: string } = {}
 ): Promise<AgentOutcome<Roadmap>> {
   const current = milestones
     .map((m) => `${m.order}. ${m.title}: ${m.description}`)
@@ -137,6 +142,7 @@ export async function adjustRoadmap(
 
   return generate({
     label: "architect.adjust",
+    userId: opts.userId,
     maxTokens: 2048,
     schema: RoadmapSchema,
     // If the model can't be reached we keep the roadmap exactly as it was

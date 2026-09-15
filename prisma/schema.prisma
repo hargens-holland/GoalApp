@@ -128,3 +128,34 @@ model Availability {
 
   @@index([userId, dayOfWeek])
 }
+
+// One row per model call (or fallback) made through lib/agents/client.ts.
+// This is the app's observability layer: without it there is no way to tell
+// from the outside whether a plan was generated or fabricated by the fallback,
+// what it cost, or how long it took. See lib/agents/telemetry.ts.
+model AgentCall {
+  id               String   @id @default(cuid())
+  // e.g. "architect.roadmap", "scheduler.week"
+  label            String
+  model            String
+  // "llm" | "fallback"
+  source           String
+  // FallbackReason when source is "fallback"
+  reason           String?
+  attempts         Int      @default(0)
+  inputTokens      Int      @default(0)
+  outputTokens     Int      @default(0)
+  cacheReadTokens  Int      @default(0)
+  cacheWriteTokens Int      @default(0)
+  latencyMs        Int      @default(0)
+  // Estimated from the pricing table at call time, in USD.
+  costUsd          Float    @default(0)
+  // Optional: which user's request triggered the call. Not a relation, so
+  // telemetry survives account deletion.
+  userId           String?
+  createdAt        DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([label, createdAt])
+  @@index([userId, createdAt])
+}

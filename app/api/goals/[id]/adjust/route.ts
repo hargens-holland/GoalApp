@@ -41,7 +41,8 @@ export async function POST(
     const { data: revised } = await adjustRoadmap(
       goal.goal,
       goal.milestones.map((m) => ({ title: m.title, description: m.description ?? "", order: m.order })),
-      req
+      req,
+      { userId: session.user.id }
     );
     // Replace the roadmap. Tasks point at milestones via SetNull, so they survive.
     await prisma.milestone.deleteMany({ where: { goalId: goal.id } });

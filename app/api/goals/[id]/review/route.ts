@@ -46,7 +46,8 @@ export async function POST(
       order: m.order,
       status: m.status,
     })),
-    recent.map((t) => ({ title: t.title, completed: isDone(t.status), notes: t.notes }))
+    recent.map((t) => ({ title: t.title, completed: isDone(t.status), notes: t.notes })),
+    { userId: session.user.id }
   );
 
   // Apply milestone statuses: completed → done, current → active, rest → locked.

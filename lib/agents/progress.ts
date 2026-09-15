@@ -89,7 +89,8 @@ export function normalizeAssessment(
 export async function assessProgress(
   goal: string,
   milestones: MilestoneInput[],
-  completions: CompletionInput[]
+  completions: CompletionInput[],
+  opts: { userId?: string } = {}
 ): Promise<AgentOutcome<ProgressAssessment>> {
   const roadmap = [...milestones]
     .sort((a, b) => a.order - b.order)
@@ -112,6 +113,7 @@ export async function assessProgress(
 
   const outcome = await generate({
     label: "progress.assess",
+    userId: opts.userId,
     maxTokens: 1024,
     schema: ProgressAssessmentSchema,
     fallback: () => fallbackAssessment(milestones, completions),

@@ -48,7 +48,7 @@ export async function POST(request: Request) {
   // Never throws: falls back to deterministic planning if the model is
   // unavailable, so goal creation always succeeds. `source` tells the client
   // whether this plan was model-generated.
-  const { data: roadmap, source: roadmapSource } = await generateRoadmap(goal, qaList);
+  const { data: roadmap, source: roadmapSource } = await generateRoadmap(goal, qaList, { userId: session.user.id });
   const title = goal.length > 60 ? goal.slice(0, 57) + "…" : goal;
 
   // Color is assigned relative to the goals that already exist, so it is

@@ -144,8 +144,9 @@ export async function scheduleTasks(input: {
   goals: SchedulerGoalInput[];
   days: DayCapacity[];
   existingTasks: ExistingTaskInput[];
+  userId?: string;
 }): Promise<AgentOutcome<Schedule>> {
-  const { goals, days, existingTasks } = input;
+  const { goals, days, existingTasks, userId } = input;
 
   // Nothing to schedule — don't spend a request finding that out.
   if (!goals.length || !days.length) {
@@ -173,6 +174,7 @@ export async function scheduleTasks(input: {
 
   const outcome = await generate({
     label: "scheduler.week",
+    userId,
     // Sized for a full week across several goals. Generous because a truncated
     // schedule is discarded entirely, which is more expensive than the tokens.
     maxTokens: 4096,

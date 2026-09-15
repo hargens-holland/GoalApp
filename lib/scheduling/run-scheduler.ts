@@ -90,6 +90,7 @@ export async function runScheduler(
   const outcome = await scheduleTasks({
     goals: schedulerGoals,
     days,
+    userId,
     existingTasks: existing.map((t) => ({
       goalId: t.goalId,
       title: t.title,

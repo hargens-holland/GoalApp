@@ -2,8 +2,12 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { SignupBody, parseBody } from "@/lib/validation";
+import { limitSignup } from "@/lib/rate-limit";
 
 export async function POST(request: Request) {
+  const limited = await limitSignup(request);
+  if (limited) return limited;
+
   try {
     const parsed = await parseBody(request, SignupBody);
     if (!parsed.ok) return parsed.response;

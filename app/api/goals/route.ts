@@ -9,6 +9,7 @@ import type { Clarification } from "@/lib/agents/schemas";
 import { serializeGoalTasks } from "@/lib/tasks";
 import { pickHue } from "@/lib/colors";
 import { CreateGoalBody, parseBody } from "@/lib/validation";
+import { limitAgentCall } from "@/lib/rate-limit";
 
 // List the user's goals with their roadmap and this week's tasks.
 export async function GET() {
@@ -36,6 +37,8 @@ export async function POST(request: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const limited = await limitAgentCall(session.user.id);
+  if (limited) return limited;
 
   const parsed = await parseBody(request, CreateGoalBody);
   if (!parsed.ok) return parsed.response;

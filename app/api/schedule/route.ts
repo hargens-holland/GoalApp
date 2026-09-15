@@ -6,6 +6,7 @@ import { getWeekRange } from "@/lib/dates";
 import { serializeTask } from "@/lib/tasks";
 import { getAvailability, runScheduler } from "@/lib/scheduling";
 import { LIMITS, ScheduleBody, intParam, parseBody } from "@/lib/validation";
+import { limitAgentCall } from "@/lib/rate-limit";
 
 function rangeForOffset(weekOffset: number) {
   const base = new Date();
@@ -48,6 +49,8 @@ export async function POST(request: Request) {
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const limited = await limitAgentCall(session.user.id);
+  if (limited) return limited;
   const parsed = await parseBody(request, ScheduleBody);
   if (!parsed.ok) return parsed.response;
   const { start, end } = rangeForOffset(parsed.data.weekOffset);

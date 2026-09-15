@@ -159,3 +159,17 @@ model AgentCall {
   @@index([label, createdAt])
   @@index([userId, createdAt])
 }
+
+// Fixed-window request counters for rate limiting. One row per (key, window);
+// the key encodes scope and identity, e.g. "signup:ip:203.0.113.4" or
+// "agent:user:ckx…". Database-backed so it works across serverless instances
+// without another service; swap for Redis when request volume justifies it.
+// See lib/rate-limit.ts.
+model RateLimit {
+  key         String
+  windowStart DateTime
+  count       Int      @default(0)
+
+  @@id([key, windowStart])
+  @@index([windowStart])
+}

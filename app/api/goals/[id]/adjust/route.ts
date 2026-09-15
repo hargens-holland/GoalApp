@@ -7,6 +7,7 @@ import { getWeekRange } from "@/lib/dates";
 import { serializeGoalTasks } from "@/lib/tasks";
 import { runScheduler } from "@/lib/scheduling";
 import { AdjustGoalBody, parseBody } from "@/lib/validation";
+import { limitAgentCall } from "@/lib/rate-limit";
 
 /**
  * The "editor". scope="roadmap" → Architect revises the milestones, then the
@@ -21,6 +22,8 @@ export async function POST(
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const limited = await limitAgentCall(session.user.id);
+  if (limited) return limited;
 
   const goal = await prisma.goal.findUnique({
     where: { id: params.id },

@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { assessProgress } from "@/lib/agents/progress";
 import { getWeekInfo } from "@/lib/dates";
 import { isDone } from "@/lib/tasks";
+import { limitAgentCall } from "@/lib/rate-limit";
 
 /**
  * PROGRESS agent endpoint. Assesses where the user is in the roadmap based on
@@ -20,6 +21,8 @@ export async function POST(
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const limited = await limitAgentCall(session.user.id);
+  if (limited) return limited;
 
   const goal = await prisma.goal.findUnique({
     where: { id: params.id },

@@ -27,9 +27,9 @@
 }
 
 @layer components {
-  /* Page and section titles. Serif, set large, tight. */
+  /* Page and section titles. Set large, medium weight, tight. */
   .display {
-    @apply font-display font-normal tracking-[-0.015em];
+    @apply font-display font-medium tracking-[-0.03em];
   }
 
   /* Small-caps label above a block of content. */

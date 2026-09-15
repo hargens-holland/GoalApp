@@ -106,10 +106,10 @@ function Dot({ state, color }: { state: "done" | "active" | "upcoming"; color: s
   }
   if (state === "active") {
     return (
-      <span className="flex h-[11px] w-[11px] items-center justify-center rounded-full border-[1.5px]" style={{ borderColor: color, background: "#f6f3ec" }}>
+      <span className="flex h-[11px] w-[11px] items-center justify-center rounded-full border-[1.5px]" style={{ borderColor: color, background: "#f4f5f7" }}>
         <span className="h-[5px] w-[5px] rounded-full" style={{ background: color }} />
       </span>
     );
   }
-  return <span className="block h-[11px] w-[11px] rounded-full border-[1.5px] border-ink-4" style={{ background: "#f6f3ec" }} />;
+  return <span className="block h-[11px] w-[11px] rounded-full border-[1.5px] border-ink-4" style={{ background: "#f4f5f7" }} />;
 }

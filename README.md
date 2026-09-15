@@ -180,7 +180,7 @@ roadmaps, current week, and reviews come from the real agents instead.
 | Testing | Vitest — 76 unit tests, no database or network required |
 | CI | GitHub Actions — typecheck, tests, production build |
 | Hosting | Vercel + Neon Postgres |
-| Design | One light theme on warm paper; the only color in the interface is per-goal OKLCH hue |
+| Design | One light, neutral theme; the only color in the interface is per-goal OKLCH hue |
 
 This is LLM *integration* and application engineering — prompt design, structured
 output enforcement, validation, and failure handling around a hosted model API.

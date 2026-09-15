@@ -79,10 +79,10 @@ export default function AuthCard({ mode }: { mode: "login" | "signup" }) {
       <div className="grid flex-1 grid-cols-1 items-center gap-16 py-16 lg:grid-cols-[1.2fr_1fr]">
         {/* Pitch */}
         <div>
-          <h1 className="display text-[56px] leading-[1.02]">
+          <h1 className="display text-[46px] leading-[1.05]">
             A goal becomes a roadmap.
             <br />
-            The roadmap becomes <em>this week</em>.
+            The roadmap becomes this week.
           </h1>
           <p className="mt-6 max-w-[520px] text-[17px] leading-[1.55] text-ink-2">
             State what you want to achieve. It&apos;s broken into milestones, and each week the next

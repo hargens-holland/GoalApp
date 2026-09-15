@@ -88,7 +88,7 @@ export default function AvailabilityForm() {
               aria-checked={d.on}
               aria-label={`Toggle ${d.name}`}
               className="relative h-[20px] w-[34px] flex-shrink-0 rounded-full transition-colors"
-              style={{ background: d.on ? "#1c1915" : "rgba(28,25,20,0.18)" }}
+              style={{ background: d.on ? "#15171c" : "rgba(21,23,28,0.18)" }}
             >
               <span className="absolute top-[3px] h-[14px] w-[14px] rounded-full bg-paper transition-[left]" style={{ left: d.on ? 17 : 3 }} />
             </button>

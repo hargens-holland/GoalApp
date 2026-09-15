@@ -25,7 +25,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         <div
           role="status"
           className="fixed bottom-6 left-1/2 z-[100] -translate-x-1/2 rounded bg-ink px-4 py-[10px] text-[13.5px] text-paper"
-          style={{ boxShadow: "0 8px 24px rgba(28,25,20,0.18)" }}
+          style={{ boxShadow: "0 8px 24px rgba(21,23,28,0.18)" }}
         >
           {toast}
         </div>

@@ -2,7 +2,7 @@
  * Per-goal accent color.
  *
  * Goals share lightness and chroma (OKLCH) and differ only in hue, so any
- * number of goals stay harmonious against the paper background. Every colored
+ * number of goals stay harmonious against the neutral background. Every colored
  * element in the interface — dots, bars, calendar blocks — derives from the
  * goal's stored hue, and nothing else in the UI carries color. That is
  * deliberate: the goals are the only thing worth distinguishing.

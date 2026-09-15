@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Hanken_Grotesk, Instrument_Serif, JetBrains_Mono } from "next/font/google";
+import { Bricolage_Grotesque, Hanken_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
 
@@ -13,11 +13,10 @@ const mono = JetBrains_Mono({
   weight: ["400", "500"],
   variable: "--font-mono",
 });
-// Display face for titles only. Everything else is the grotesk.
-const display = Instrument_Serif({
+// Display face for titles only. Everything else is Hanken.
+const display = Bricolage_Grotesque({
   subsets: ["latin"],
-  weight: ["400"],
-  style: ["normal", "italic"],
+  weight: ["500", "600"],
   variable: "--font-display",
 });
 

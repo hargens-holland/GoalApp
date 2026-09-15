@@ -279,7 +279,7 @@ export default function WeekView({ initial, goals, streak, todayISO }: Props) {
               <div
                 key={day.iso}
                 className="flex items-baseline gap-[6px] border-l border-rule px-2 pb-2 pt-3"
-                style={{ borderTop: day.isToday ? "2px solid #1c1915" : "2px solid transparent", marginTop: -1 }}
+                style={{ borderTop: day.isToday ? "2px solid #15171c" : "2px solid transparent", marginTop: -1 }}
               >
                 <span className={`text-[12px] font-medium ${day.isToday ? "text-ink" : closed ? "text-ink-4" : "text-ink-3"}`}>
                   {DOW[day.dow]}
@@ -512,10 +512,10 @@ function TaskRow({
           onClick={onToggle}
           aria-label={task.completed ? "Mark not done" : "Mark done"}
           className="mt-[3px] flex h-[16px] w-[16px] flex-shrink-0 items-center justify-center rounded-sm border transition-colors"
-          style={{ borderColor: task.completed ? color : "rgba(28,25,20,0.35)", background: task.completed ? color : "transparent" }}
+          style={{ borderColor: task.completed ? color : "rgba(21,23,28,0.35)", background: task.completed ? color : "transparent" }}
         >
           {task.completed && (
-            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="#f6f3ec" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="#f4f5f7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M2 5.2 L4.2 7.4 L8 3.2" />
             </svg>
           )}

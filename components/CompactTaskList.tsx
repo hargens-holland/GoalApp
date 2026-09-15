@@ -30,7 +30,7 @@ function Row({ task, hue }: { task: CompactTask; hue: number }) {
         onClick={toggle}
         aria-label={completed ? "Mark not done" : "Mark done"}
         className="flex h-[14px] w-[14px] flex-shrink-0 items-center justify-center rounded-sm border transition-colors"
-        style={{ borderColor: completed ? color : "rgba(28,25,20,0.35)", background: completed ? color : "transparent" }}
+        style={{ borderColor: completed ? color : "rgba(21,23,28,0.35)", background: completed ? color : "transparent" }}
       />
       <span className="w-[52px] flex-shrink-0 font-mono text-[12px] text-ink-3">{task.day}</span>
       <span className="w-[42px] flex-shrink-0 font-mono text-[12px] text-ink-4">{task.time || "—"}</span>

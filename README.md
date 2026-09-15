@@ -222,6 +222,8 @@ the subdomain setup.
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — system and agent diagrams, the failure-handling
   matrix, data model rationale, and request flows.
 - **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** — hosting, environment variables, operational notes.
+- **[docs/AI_ENGINEERING_ROADMAP.md](docs/AI_ENGINEERING_ROADMAP.md)** — planned additions (tool use, MCP,
+  RAG, caching, evals, agent hosting) and where each plugs into the codebase.
 
 ---
 

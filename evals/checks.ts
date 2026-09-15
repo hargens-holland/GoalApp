@@ -108,9 +108,11 @@ export function runChecks(roadmap: Roadmap, evalCase: EvalCase): CheckResult {
 
   checks.orders_sequential = ms.every((m, i) => m.order === i);
 
+  // Due-week semantics: the first milestone is due some time after the start,
+  // and no milestone is due before the one preceding it.
   checks.offsets_monotonic =
     ms.length > 0 &&
-    ms[0].targetWeekOffset === 0 &&
+    ms[0].targetWeekOffset >= 1 &&
     ms.every((m, i) => i === 0 || m.targetWeekOffset >= ms[i - 1].targetWeekOffset);
 
   if (evalCase.expect.deadlineWeeks != null) {

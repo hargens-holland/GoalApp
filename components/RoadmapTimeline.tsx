@@ -3,11 +3,11 @@ import { goalColor } from "@/lib/colors";
 /**
  * The roadmap drawn as a timeline.
  *
- * Milestones carry a `targetWeekOffset` from the Architect, so they have a
- * natural position on a week-scaled axis — and the goal's age gives a "now"
- * marker on the same axis. Drawing it shows at a glance whether the user is
- * ahead of or behind the plan, which a vertical list of the same milestones
- * cannot. Everything here is static markup; there is nothing to click.
+ * Milestones carry a `targetWeekOffset` from the Architect — the week each
+ * one is due — so they have a natural position on a week-scaled axis, and the
+ * goal's age gives a "now" marker on the same axis. A due dot to the left of
+ * "now" that isn't filled is a milestone running late; that reading is the
+ * whole point of drawing it. Everything here is static markup.
  */
 
 export interface TimelineMilestone {
@@ -35,7 +35,7 @@ export default function RoadmapTimeline({ milestones, hue, weeksElapsed }: Props
   // The axis runs from week 0 to a little past the last milestone, and always
   // far enough to include "now" so the marker never falls off the end.
   const lastWeek = sorted.length ? weekOf(sorted[sorted.length - 1], sorted.length - 1) : 0;
-  const span = Math.max(lastWeek + 2, weeksElapsed + 1, 4);
+  const span = Math.max(lastWeek + 1, weeksElapsed + 1, 4);
   const pct = (week: number) => `${Math.min(100, Math.max(0, (week / span) * 100))}%`;
 
   return (

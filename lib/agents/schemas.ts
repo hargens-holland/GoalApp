@@ -51,10 +51,15 @@ export const MilestoneSchema = z.object({
     .string()
     .describe("A concrete, checkable condition that means this phase is done."),
   order: z.number().int().describe("0-based position in the sequence."),
+  // Due-week semantics, chosen after the eval harness showed the model reads
+  // "targeted" as a due date while the app had been treating it as a start
+  // date. A due date is the natural reading for a milestone, so the app moved.
   targetWeekOffset: z
     .number()
     .int()
-    .describe("Whole weeks from the goal's start when this milestone is targeted."),
+    .describe(
+      "The week, counted in whole weeks from the goal's start, by which this milestone should be complete. The first milestone's is at least 1; each later one is at or after the previous; the last lands at or before the user's deadline."
+    ),
 });
 export type GeneratedMilestone = z.infer<typeof MilestoneSchema>;
 

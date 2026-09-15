@@ -48,14 +48,14 @@ export function fallbackRoadmap(goal: string): Roadmap {
         successCriteria:
           "Your starting point is written down and the first 2 weeks of sessions are scheduled.",
         order: 0,
-        targetWeekOffset: 0,
+        targetWeekOffset: 2,
       },
       {
         title: "Build momentum",
         description: "Put in consistent reps on the core activity for this goal.",
         successCriteria: "4 consecutive weeks with at least 3 sessions completed each week.",
         order: 1,
-        targetWeekOffset: 2,
+        targetWeekOffset: 5,
       },
       {
         title: "Push past the plateau",
@@ -63,7 +63,7 @@ export function fallbackRoadmap(goal: string): Roadmap {
           "Increase difficulty and address the gaps the Progress agent surfaces.",
         successCriteria: "At least 1 measured improvement over the week-0 baseline, written down.",
         order: 2,
-        targetWeekOffset: 6,
+        targetWeekOffset: 8,
       },
       {
         title: "Consolidate & finish",
@@ -85,6 +85,16 @@ const FALLBACK_QUESTIONS = [
 // ---------------------------------------------------------------------------
 // Agent calls
 // ---------------------------------------------------------------------------
+
+/**
+ * The model has no clock. "By the end of the year" is meaningless to it
+ * without today's date, and the eval harness showed exactly that: a 24-week
+ * plan against a 16-week deadline. The date goes in the user turn, not the
+ * system block, so it never invalidates the cached prefix.
+ */
+function todayISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}
 
 /** Three questions used to personalize the roadmap before it is generated. */
 export async function generateClarifyingQuestions(
@@ -133,14 +143,18 @@ export async function generateRoadmap(
 3-6 sequential milestones — phases of work, not day-to-day tasks.
 
 Each milestone needs a concrete success criterion that can actually be checked,
-and a targetWeekOffset counted in whole weeks from the start of the goal.
-Order them from 0, in the sequence they should be tackled. Respect any
-deadline or time budget the user states: the last milestone's week offset
-should land at or before the deadline, and the amount of work implied should
-fit the hours they said they have.
+and a targetWeekOffset: the week, in whole weeks from the start of the goal,
+by which that milestone should be complete. Order them from 0, in the sequence
+they should be tackled. Respect any deadline or time budget the user states:
+the last milestone's week offset must land at or before the deadline, and the
+amount of work implied should fit the hours they said they have. When the
+user gives a deadline as a date or a phrase ("by June", "end of the year"),
+convert it to weeks from today's date, which is given with the goal.
 
 ${UNTRUSTED_NOTICE}`,
-    prompt: `Goal:
+    prompt: `Today's date: ${todayISO()}
+
+Goal:
 ${untrusted(goal)}
 
 What the user told us:
@@ -174,7 +188,7 @@ export async function adjustRoadmap(
         description: m.description,
         successCriteria: "",
         order: m.order,
-        targetWeekOffset: m.order * 2,
+        targetWeekOffset: (m.order + 1) * 2,
       })),
     }),
     system: `You are a goal-planning architect. Revise an existing milestone

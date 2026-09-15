@@ -51,7 +51,7 @@ describe("known-bad roadmaps fail the right check", () => {
   };
   const good: Roadmap = {
     milestones: [
-      { title: "Build a base", description: "Easy running.", successCriteria: "Four weeks at 20 km without pain.", order: 0, targetWeekOffset: 0 },
+      { title: "Build a base", description: "Easy running.", successCriteria: "Four weeks at 20 km without pain.", order: 0, targetWeekOffset: 3 },
       { title: "Extend the long run", description: "Longer Saturdays.", successCriteria: "A 15 km run at conversational pace.", order: 1, targetWeekOffset: 4 },
       { title: "Race", description: "Taper and run.", successCriteria: "Half marathon finished under 2 hours.", order: 2, targetWeekOffset: 10 },
     ],
@@ -72,6 +72,11 @@ describe("known-bad roadmaps fail the right check", () => {
 
   it("offsets_monotonic: weeks go backwards", () => {
     const bad = { milestones: good.milestones.map((m, i) => ({ ...m, targetWeekOffset: i === 1 ? 12 : m.targetWeekOffset })) };
+    expect(runChecks(bad, base).failures).toContain("offsets_monotonic");
+  });
+
+  it("offsets_monotonic: first milestone due at week 0 (start-week semantics)", () => {
+    const bad = { milestones: good.milestones.map((m, i) => ({ ...m, targetWeekOffset: i === 0 ? 0 : m.targetWeekOffset })) };
     expect(runChecks(bad, base).failures).toContain("offsets_monotonic");
   });
 

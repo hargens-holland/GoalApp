@@ -100,10 +100,10 @@ const GOALS: SeedGoal[] = [
       { question: "Any injuries to work around?", answer: "Mild runner's knee last year" },
     ],
     milestones: [
-      { title: "Build an aerobic base", description: "Get to 25 km a week at conversational pace without knee pain.", successCriteria: "Four consecutive weeks at 25 km+ with no flare-ups.", targetWeekOffset: 0 },
-      { title: "Extend the long run to 12K", description: "Stretch Saturday's run while keeping midweek genuinely easy.", successCriteria: "A 12 km long run at conversational pace.", targetWeekOffset: 6 },
-      { title: "Add tempo and threshold work", description: "Introduce structured speed work to lift race pace.", successCriteria: "Hold 5:20/km for 8 km in a tempo session.", targetWeekOffset: 12 },
-      { title: "Taper and race", description: "Reduce volume, sharpen, and run the race.", successCriteria: "Half marathon finished under two hours.", targetWeekOffset: 18 },
+      { title: "Build an aerobic base", description: "Get to 25 km a week at conversational pace without knee pain.", successCriteria: "Four consecutive weeks at 25 km+ with no flare-ups.", targetWeekOffset: 6 },
+      { title: "Extend the long run to 12K", description: "Stretch Saturday's run while keeping midweek genuinely easy.", successCriteria: "A 12 km long run at conversational pace.", targetWeekOffset: 12 },
+      { title: "Add tempo and threshold work", description: "Introduce structured speed work to lift race pace.", successCriteria: "Hold 5:20/km for 8 km in a tempo session.", targetWeekOffset: 18 },
+      { title: "Taper and race", description: "Reduce volume, sharpen, and run the race.", successCriteria: "Half marathon finished under two hours.", targetWeekOffset: 24 },
     ],
     sessions: [
       { title: "Easy 5K", description: "Conversational pace. Nose-breathing only.", minutes: 35, weekday: 1 },
@@ -129,10 +129,10 @@ const GOALS: SeedGoal[] = [
       { question: "Any particular songs in mind?", answer: "Blackbird, and something by Tommy Emmanuel eventually" },
     ],
     milestones: [
-      { title: "Independent thumb", description: "Hold a steady alternating bass while the fingers play melody.", successCriteria: "An alternating bass through a chord progression without losing time.", targetWeekOffset: 0 },
-      { title: "Clean chord transitions", description: "Move between shapes without buzzing or breaking rhythm.", successCriteria: "The Blackbird intro at 80% speed, clean.", targetWeekOffset: 5 },
-      { title: "First song end to end", description: "Memorise and perform one full arrangement.", successCriteria: "Blackbird start to finish from memory.", targetWeekOffset: 10 },
-      { title: "Two more songs", description: "Add two arrangements at a similar level.", successCriteria: "Three songs played back to back without the sheet.", targetWeekOffset: 16 },
+      { title: "Independent thumb", description: "Hold a steady alternating bass while the fingers play melody.", successCriteria: "An alternating bass through a chord progression without losing time.", targetWeekOffset: 5 },
+      { title: "Clean chord transitions", description: "Move between shapes without buzzing or breaking rhythm.", successCriteria: "The Blackbird intro at 80% speed, clean.", targetWeekOffset: 10 },
+      { title: "First song end to end", description: "Memorise and perform one full arrangement.", successCriteria: "Blackbird start to finish from memory.", targetWeekOffset: 16 },
+      { title: "Two more songs", description: "Add two arrangements at a similar level.", successCriteria: "Three songs played back to back without the sheet.", targetWeekOffset: 24 },
     ],
     sessions: [
       { title: "Chord transition drills", description: "G → C → D at 60 bpm, clean landings.", minutes: 30, weekday: 2 },
@@ -156,10 +156,10 @@ const GOALS: SeedGoal[] = [
       { question: "When do you want it launched?", answer: "Within two months" },
     ],
     milestones: [
-      { title: "Scope and data model", description: "Decide what's in, what's out, and how sessions are stored.", successCriteria: "A one-page scope doc and a schema that fits it.", targetWeekOffset: 0 },
-      { title: "Core timer, persisted", description: "Start, stop, and save a focus session end to end.", successCriteria: "A session survives a page reload.", targetWeekOffset: 3 },
-      { title: "Dashboard and weekly summary", description: "Visualise session history and weekly totals.", successCriteria: "The dashboard shows real session data over time.", targetWeekOffset: 6 },
-      { title: "Auth, polish, launch", description: "Add accounts, fix the rough edges, deploy.", successCriteria: "Deployed and usable by someone who isn't me.", targetWeekOffset: 9 },
+      { title: "Scope and data model", description: "Decide what's in, what's out, and how sessions are stored.", successCriteria: "A one-page scope doc and a schema that fits it.", targetWeekOffset: 3 },
+      { title: "Core timer, persisted", description: "Start, stop, and save a focus session end to end.", successCriteria: "A session survives a page reload.", targetWeekOffset: 6 },
+      { title: "Dashboard and weekly summary", description: "Visualise session history and weekly totals.", successCriteria: "The dashboard shows real session data over time.", targetWeekOffset: 9 },
+      { title: "Auth, polish, launch", description: "Add accounts, fix the rough edges, deploy.", successCriteria: "Deployed and usable by someone who isn't me.", targetWeekOffset: 12 },
     ],
     sessions: [
       { title: "Timer UI", description: "Start, pause, reset. Persistence next.", minutes: 90, weekday: 2 },
@@ -182,9 +182,9 @@ const GOALS: SeedGoal[] = [
       { question: "Do you have anyone to practise with?", answer: "A colleague who's a native speaker" },
     ],
     milestones: [
-      { title: "Rebuild core vocabulary", description: "Recover the everyday words and present-tense verbs.", successCriteria: "500 common words recalled reliably.", targetWeekOffset: 0 },
-      { title: "Past and future tenses", description: "Talk about things that already happened or haven't yet.", successCriteria: "Describe last weekend without stopping to translate.", targetWeekOffset: 6 },
-      { title: "Sustained conversation", description: "Hold a real conversation at natural speed.", successCriteria: "15 minutes with a native speaker, no English.", targetWeekOffset: 12 },
+      { title: "Rebuild core vocabulary", description: "Recover the everyday words and present-tense verbs.", successCriteria: "500 common words recalled reliably.", targetWeekOffset: 6 },
+      { title: "Past and future tenses", description: "Talk about things that already happened or haven't yet.", successCriteria: "Describe last weekend without stopping to translate.", targetWeekOffset: 12 },
+      { title: "Sustained conversation", description: "Hold a real conversation at natural speed.", successCriteria: "15 minutes with a native speaker, no English.", targetWeekOffset: 16 },
     ],
     sessions: [
       { title: "Vocabulary: 20 new words", description: "Spaced repetition. Food and travel this week.", minutes: 20, weekday: 1 },
@@ -216,14 +216,15 @@ function rng(seed: number) {
 
 /**
  * Milestone statuses from where "now" falls on the roadmap's week axis.
- * Consistent with the timeline the goal page draws: the milestone whose
- * window contains the current week is active, earlier ones are done.
+ * Offsets are due weeks: a milestone whose due week has passed is done, the
+ * first one still ahead is active, the rest are locked. Consistent with the
+ * timeline the goal page draws.
  */
 function statusFor(offsets: number[], index: number, weeksElapsed: number): "done" | "active" | "locked" {
-  const startsAt = offsets[index];
-  const nextStartsAt = offsets[index + 1] ?? Infinity;
-  if (weeksElapsed >= nextStartsAt) return "done";
-  if (weeksElapsed >= startsAt) return "active";
+  const dueAt = offsets[index];
+  const previousDueAt = offsets[index - 1] ?? 0;
+  if (weeksElapsed >= dueAt) return "done";
+  if (weeksElapsed >= previousDueAt) return "active";
   return "locked";
 }
 

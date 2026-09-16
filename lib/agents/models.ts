@@ -12,6 +12,8 @@
  *                clamped and validated anyway. Sonnet.
  *   Scheduler  — runs on every change, and its output is heavily constrained
  *                by availability and by keepValidTasks. Sonnet.
+ *   Coordinator — classifies a sentence into one of ten actions and fills in
+ *                ids from a short context. Sonnet.
  *
  * The Sonnet assignments are a hypothesis until the eval harness (evals/)
  * shows Sonnet's roadmaps and schedules score the same as Opus's. Until then
@@ -26,12 +28,15 @@
  * been confirmed for this SDK path.
  */
 
-export type AgentName = "architect" | "progress" | "scheduler";
+export type AgentName = "architect" | "progress" | "scheduler" | "coordinator";
 
 export const DEFAULT_MODELS: Record<AgentName, string> = {
   architect: "claude-opus-5",
   progress: "claude-sonnet-5",
   scheduler: "claude-sonnet-5",
+  // Classification into a fixed set of actions with ids filled from context.
+  // Measured by evals/cases/intents.json.
+  coordinator: "claude-sonnet-5",
 };
 
 export function modelFor(agent: AgentName): string {

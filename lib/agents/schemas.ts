@@ -111,3 +111,53 @@ export const ScheduleSchema = z.object({
   tasks: z.array(DailyTaskSchema),
 });
 export type Schedule = z.infer<typeof ScheduleSchema>;
+
+// ---------------------------------------------------------------------------
+// Coordinator
+// ---------------------------------------------------------------------------
+
+/**
+ * What the user asked for, as one of a fixed set of actions the app knows how
+ * to carry out. The Coordinator classifies; code executes. A flat object with
+ * nullable slots rather than a discriminated union, because structured
+ * outputs render a union as anyOf and a flat shape is both easier for the
+ * model to fill and easier to validate afterwards.
+ */
+export const INTENT_ACTIONS = [
+  "clear_day",
+  "replan_week",
+  "pause_goal",
+  "resume_goal",
+  "skip_task",
+  "complete_task",
+  "review_goal",
+  "revise_roadmap",
+  "answer",
+  "unclear",
+] as const;
+export type IntentAction = (typeof INTENT_ACTIONS)[number];
+
+export const IntentSchema = z.object({
+  action: z.enum(INTENT_ACTIONS).describe(
+    [
+      "clear_day: the user cannot do a particular day; skip that day's unfinished tasks and re-lay the rest of the week.",
+      "replan_week: rebuild the remaining days of this week from scratch.",
+      "pause_goal / resume_goal: stop or restart scheduling one goal.",
+      "skip_task / complete_task: change one task's status.",
+      "review_goal: run the weekly progress review for one goal.",
+      "revise_roadmap: the user wants a goal's milestones changed; carry their request through.",
+      "answer: a question answerable from the context given; nothing to change.",
+      "unclear: you cannot tell what they want or which goal or task they mean; ask.",
+    ].join(" ")
+  ),
+  date: z.string().nullable().describe("YYYY-MM-DD for clear_day, resolved relative to today. Null otherwise."),
+  goalId: z.string().nullable().describe("An id from the goals list, when the action concerns one goal. Null otherwise."),
+  taskId: z.string().nullable().describe("An id from the tasks list, for skip_task or complete_task. Null otherwise."),
+  request: z.string().nullable().describe("For revise_roadmap: what to change, in the user's own words. Null otherwise."),
+  message: z
+    .string()
+    .describe(
+      "One or two sentences to show the user. For an action: what you understood and what will happen, in plain words. For answer: the answer. For unclear: the question you need answered."
+    ),
+});
+export type Intent = z.infer<typeof IntentSchema>;

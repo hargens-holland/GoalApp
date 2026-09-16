@@ -4,7 +4,7 @@ import type { FallbackReason } from "@/lib/agents/client";
 import { fromISODate, toISODate } from "@/lib/dates";
 import { notFinishedFilter } from "@/lib/tasks";
 import { getAvailability } from "./availability";
-import { placeTasks } from "./placement";
+import { placeTasks, subtractBusy, type BusyInterval } from "./placement";
 
 export interface SchedulerRunResult {
   created: number;
@@ -76,16 +76,27 @@ export async function runScheduler(
     };
   });
 
-  const availability = await getAvailability(userId, start, end);
+  // Finished and skipped tasks survive regeneration (see the transaction
+  // below), and they still occupy their time slots. Carve those out of the
+  // free windows before asking the model how much capacity each day has, and
+  // before packing — otherwise the new week is laid on top of the old one.
+  const existing = await prisma.task.findMany({
+    where: { goalId: { in: goals.map((g) => g.id) }, date: { gte: start, lte: end } },
+    select: { goalId: true, title: true, date: true, status: true, scheduledStart: true, scheduledEnd: true },
+  });
+  const kept: BusyInterval[] = existing
+    .filter((t) => (t.status === "done" || t.status === "skipped") && t.scheduledStart && t.scheduledEnd)
+    .map((t) => ({
+      date: toISODate(t.date),
+      startMinute: t.scheduledStart!.getUTCHours() * 60 + t.scheduledStart!.getUTCMinutes(),
+      endMinute: t.scheduledEnd!.getUTCHours() * 60 + t.scheduledEnd!.getUTCMinutes(),
+    }));
+
+  const availability = subtractBusy(await getAvailability(userId, start, end), kept);
   const days = availability.map((a) => ({
     date: a.date,
     availableMinutes: a.availableMinutes,
   }));
-
-  const existing = await prisma.task.findMany({
-    where: { goalId: { in: goals.map((g) => g.id) }, date: { gte: start, lte: end } },
-    select: { goalId: true, title: true, date: true },
-  });
 
   const outcome = await scheduleTasks({
     goals: schedulerGoals,

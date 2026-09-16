@@ -127,3 +127,50 @@ describe("placeTasks", () => {
     expect(startTime(byId.get("mon-2")!.scheduledStart)).toBe("10:00");
   });
 });
+
+import { subtractBusy } from "@/lib/scheduling/placement";
+
+/**
+ * Regeneration keeps finished tasks and replaces the rest; the kept ones still
+ * own their slots. Found when a replanned week drew a new 07:00 task on top of
+ * the 07:00 run that had already been ticked off.
+ */
+describe("subtractBusy", () => {
+  const day = { date: "2026-09-14", dayOfWeek: 1, blocks: [{ startMinute: 420, endMinute: 600 }], availableMinutes: 180 };
+
+  it("leaves days with nothing kept untouched", () => {
+    expect(subtractBusy([day], [])).toEqual([day]);
+  });
+
+  it("splits a block around a kept task in the middle", () => {
+    const [d] = subtractBusy([day], [{ date: "2026-09-14", startMinute: 480, endMinute: 510 }]);
+    expect(d.blocks).toEqual([{ startMinute: 420, endMinute: 480 }, { startMinute: 510, endMinute: 600 }]);
+    expect(d.availableMinutes).toBe(150);
+  });
+
+  it("trims a kept task at the start of a block", () => {
+    const [d] = subtractBusy([day], [{ date: "2026-09-14", startMinute: 420, endMinute: 455 }]);
+    expect(d.blocks).toEqual([{ startMinute: 455, endMinute: 600 }]);
+  });
+
+  it("handles several kept tasks on one day", () => {
+    const [d] = subtractBusy([day], [
+      { date: "2026-09-14", startMinute: 420, endMinute: 455 },
+      { date: "2026-09-14", startMinute: 455, endMinute: 475 },
+    ]);
+    expect(d.blocks).toEqual([{ startMinute: 475, endMinute: 600 }]);
+    expect(d.availableMinutes).toBe(125);
+  });
+
+  it("removes a block a kept task covers entirely", () => {
+    const [d] = subtractBusy([day], [{ date: "2026-09-14", startMinute: 400, endMinute: 620 }]);
+    expect(d.blocks).toEqual([]);
+    expect(d.availableMinutes).toBe(0);
+  });
+
+  it("then packs new tasks only into what is left", () => {
+    const free = subtractBusy([day], [{ date: "2026-09-14", startMinute: 420, endMinute: 455 }]);
+    const [placed] = placeTasks([{ id: "a", date: "2026-09-14", estimatedMinutes: 30 }], free);
+    expect(placed.scheduledStart?.toISOString()).toBe("2026-09-14T07:35:00.000Z");
+  });
+});

@@ -38,6 +38,53 @@ function minutesToDate(isoDate: string, minute: number): Date {
   );
 }
 
+/** A slot already taken on a given day — a task that survived regeneration. */
+export interface BusyInterval {
+  /** YYYY-MM-DD */
+  date: string;
+  startMinute: number;
+  endMinute: number;
+}
+
+/**
+ * Remove already-occupied time from each day's free blocks.
+ *
+ * Regeneration keeps tasks the user has finished or skipped and replaces the
+ * rest. The kept tasks still occupy their slots, so the new ones must be
+ * packed around them — otherwise a fresh 09:00 task lands on top of the 09:00
+ * task you did this morning. This carves each busy interval out of the block
+ * that contains it, leaving zero, one, or two smaller blocks.
+ */
+export function subtractBusy(availability: DayAvailability[], busy: BusyInterval[]): DayAvailability[] {
+  const byDate = new Map<string, BusyInterval[]>();
+  for (const b of busy) byDate.set(b.date, [...(byDate.get(b.date) ?? []), b]);
+
+  return availability.map((day) => {
+    const taken = byDate.get(day.date);
+    if (!taken?.length) return day;
+
+    let blocks = day.blocks.map((b) => ({ ...b }));
+    for (const t of taken) {
+      const next: typeof blocks = [];
+      for (const b of blocks) {
+        if (t.endMinute <= b.startMinute || t.startMinute >= b.endMinute) {
+          next.push(b); // no overlap
+          continue;
+        }
+        if (t.startMinute > b.startMinute) next.push({ startMinute: b.startMinute, endMinute: t.startMinute });
+        if (t.endMinute < b.endMinute) next.push({ startMinute: t.endMinute, endMinute: b.endMinute });
+      }
+      blocks = next;
+    }
+    blocks.sort((a, b) => a.startMinute - b.startMinute);
+    return {
+      ...day,
+      blocks,
+      availableMinutes: blocks.reduce((sum, b) => sum + (b.endMinute - b.startMinute), 0),
+    };
+  });
+}
+
 /**
  * Assign each task a start/end time inside its day's available blocks.
  *

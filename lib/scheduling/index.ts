@@ -8,8 +8,8 @@
 export { getAvailability } from "./availability";
 export type { Block, DayAvailability } from "./availability";
 
-export { placeTasks } from "./placement";
-export type { PlaceableTask, PlacedTask } from "./placement";
+export { placeTasks, subtractBusy } from "./placement";
+export type { BusyInterval, PlaceableTask, PlacedTask } from "./placement";
 
 export { runScheduler } from "./run-scheduler";
 export type { SchedulerRunResult } from "./run-scheduler";

@@ -188,9 +188,10 @@ export async function scheduleTasks(input: {
     label: "scheduler.week",
     model: input.model ?? modelFor("scheduler"),
     userId,
-    // Sized for a full week across several goals. Generous because a truncated
-    // schedule is discarded entirely, which is more expensive than the tokens.
-    maxTokens: 4096,
+    // Sized for a full week across several goals *plus* the model's reasoning,
+    // which is billed as output on Sonnet 5 / Opus 5. Generous because a
+    // truncated schedule is discarded entirely, which costs more than tokens.
+    maxTokens: 12000,
     schema: ScheduleSchema,
     fallback: () => fallbackSchedule(goals, days),
     system: `You are a scheduling agent. Lay out concrete daily tasks for the

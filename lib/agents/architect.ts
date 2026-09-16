@@ -105,7 +105,7 @@ export async function generateClarifyingQuestions(
     label: "architect.clarify",
     model: opts.model ?? modelFor("architect"),
     userId: opts.userId,
-    maxTokens: 512,
+    maxTokens: 2048,
     schema: ClarifyingQuestionsSchema,
     system: `You help people plan long-term goals. Given a goal statement, write
 exactly 3 concise clarifying questions whose answers would let a planner build
@@ -136,7 +136,7 @@ export async function generateRoadmap(
     label: "architect.roadmap",
     model: opts.model ?? modelFor("architect"),
     userId: opts.userId,
-    maxTokens: 2048,
+    maxTokens: 8192,
     schema: RoadmapSchema,
     fallback: () => fallbackRoadmap(goal),
     system: `You are a goal-planning architect. Break a goal into a roadmap of
@@ -177,7 +177,7 @@ export async function adjustRoadmap(
     label: "architect.adjust",
     model: opts.model ?? modelFor("architect"),
     userId: opts.userId,
-    maxTokens: 2048,
+    maxTokens: 8192,
     schema: RoadmapSchema,
     // If the model can't be reached we keep the roadmap exactly as it was
     // rather than inventing a new one: silently replacing a user's plan with

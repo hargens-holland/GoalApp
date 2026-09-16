@@ -143,6 +143,15 @@ function addUsage(total: CallUsage, u: Anthropic.Usage): void {
   total.cacheWriteTokens += u.cache_creation_input_tokens ?? 0;
 }
 
+/** The SDK's own error for a structured output it could not parse. */
+function isStructuredOutputParseError(error: unknown): boolean {
+  return (
+    error instanceof Anthropic.AnthropicError &&
+    !(error instanceof Anthropic.APIError) &&
+    /Failed to parse structured output/.test(error.message)
+  );
+}
+
 /** Map a thrown SDK error to a typed reason. Order matters: subclasses first. */
 function classifyError(error: unknown): FallbackReason {
   if (error instanceof Anthropic.APIConnectionTimeoutError) return "timeout";
@@ -222,7 +231,12 @@ export interface GenerateOptions<T> {
   prompt: string;
   /** Schema the response is constrained to and validated against. */
   schema: z.ZodType<T>;
-  /** Output token ceiling for this call. */
+  /**
+   * Output token ceiling for this call. On Opus 5 and Sonnet 5 the model's
+   * own reasoning is billed as output and counts against this, so the number
+   * has to leave room for thinking *and* the JSON — a week of tasks for four
+   * goals ran past 4096 in practice and came back as an unparsable prefix.
+   */
   maxTokens: number;
   /**
    * Deterministic planner used when the model cannot be reached or cannot
@@ -317,6 +331,16 @@ export async function generate<T>({
       logOutcome(label, model, outcome, usage, outcome.latencyMs, userId);
       return outcome;
     } catch (error) {
+      // messages.parse() parses the JSON before handing the message back, so
+      // output cut off by max_tokens surfaces here as a thrown parse error
+      // rather than as stop_reason === "max_tokens". It is the same semantic
+      // failure and gets the same single retry. Tokens for this attempt are
+      // lost to telemetry — the SDK does not attach usage to the error.
+      if (isStructuredOutputParseError(error)) {
+        reason = "invalid_output";
+        console.warn(`[agent:${label}] output did not parse (likely truncated at max_tokens=${maxTokens})`);
+        continue;
+      }
       reason = classifyError(error);
       console.warn(
         `[agent:${label}] call failed: reason=${reason}`,

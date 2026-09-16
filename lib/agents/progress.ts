@@ -119,7 +119,7 @@ export async function assessProgress(
     label: "progress.assess",
     model: opts.model ?? modelFor("progress"),
     userId: opts.userId,
-    maxTokens: 1024,
+    maxTokens: 4096,
     schema: ProgressAssessmentSchema,
     fallback: () => fallbackAssessment(milestones, completions),
     system: `You are a progress-tracking agent. Given a goal, its milestone

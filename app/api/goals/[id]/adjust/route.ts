@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { adjustRoadmap } from "@/lib/agents/architect";
+import { reviseRoadmap } from "@/lib/operations/revise";
 import { getWeekRange } from "@/lib/dates";
 import { serializeGoalTasks } from "@/lib/tasks";
 import { runScheduler } from "@/lib/scheduling";
@@ -25,10 +25,7 @@ export async function POST(
   const limited = await limitAgentCall(session.user.id);
   if (limited) return limited;
 
-  const goal = await prisma.goal.findUnique({
-    where: { id: params.id },
-    include: { milestones: { orderBy: { order: "asc" } } },
-  });
+  const goal = await prisma.goal.findUnique({ where: { id: params.id }, select: { id: true, userId: true } });
   if (!goal || goal.userId !== session.user.id) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
@@ -41,31 +38,7 @@ export async function POST(
     if (!req?.trim()) {
       return NextResponse.json({ error: "request is required" }, { status: 400 });
     }
-    const { data: revised } = await adjustRoadmap(
-      goal.goal,
-      goal.milestones.map((m) => ({ title: m.title, description: m.description ?? "", order: m.order })),
-      req,
-      { userId: session.user.id }
-    );
-    // Replace the roadmap. Tasks point at milestones via SetNull, so they survive.
-    await prisma.milestone.deleteMany({ where: { goalId: goal.id } });
-    await prisma.goal.update({
-      where: { id: goal.id },
-      data: {
-        milestones: {
-          create: revised.milestones
-            .sort((a, b) => a.order - b.order)
-            .map((m, i) => ({
-              title: m.title,
-              description: m.description,
-              successCriteria: m.successCriteria,
-              order: i,
-              targetWeekOffset: m.targetWeekOffset,
-              status: i === 0 ? "active" : "locked",
-            })),
-        },
-      },
-    });
+    await reviseRoadmap(session.user.id, goal.id, req);
   }
 
   const { start, end } = getWeekRange();

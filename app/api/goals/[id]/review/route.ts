@@ -2,9 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { assessProgress } from "@/lib/agents/progress";
-import { getWeekInfo } from "@/lib/dates";
-import { isDone } from "@/lib/tasks";
+import { runReview } from "@/lib/operations/review";
 import { limitAgentCall } from "@/lib/rate-limit";
 
 /**
@@ -24,76 +22,11 @@ export async function POST(
   const limited = await limitAgentCall(session.user.id);
   if (limited) return limited;
 
-  const goal = await prisma.goal.findUnique({
-    where: { id: params.id },
-    include: { milestones: { orderBy: { order: "asc" } } },
-  });
+  const goal = await prisma.goal.findUnique({ where: { id: params.id }, select: { id: true, userId: true } });
   if (!goal || goal.userId !== session.user.id) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  // Recent task results (last 14 days) feed the assessment.
-  const since = new Date();
-  since.setUTCDate(since.getUTCDate() - 14);
-  const recent = await prisma.task.findMany({
-    where: { goalId: goal.id, date: { gte: since } },
-    select: { title: true, status: true, notes: true },
-  });
-
-  const { data: assessment, source } = await assessProgress(
-    goal.goal,
-    goal.milestones.map((m) => ({
-      id: m.id,
-      title: m.title,
-      successCriteria: m.successCriteria,
-      order: m.order,
-      status: m.status,
-    })),
-    recent.map((t) => ({ title: t.title, completed: isDone(t.status), notes: t.notes })),
-    { userId: session.user.id }
-  );
-
-  // Apply milestone statuses: completed → done, current → active, rest → locked.
-  const done = new Set(assessment.completedMilestoneIds);
-  await Promise.all(
-    goal.milestones.map((m) =>
-      prisma.milestone.update({
-        where: { id: m.id },
-        data: {
-          status: done.has(m.id)
-            ? "done"
-            : m.id === assessment.currentMilestoneId
-            ? "active"
-            : m.status === "active"
-            ? "locked"
-            : m.status,
-        },
-      })
-    )
-  );
-
-  await prisma.goal.update({
-    where: { id: goal.id },
-    data: { progress: assessment.progressPercent },
-  });
-
-  const { weekNumber, year } = getWeekInfo();
-  const snapshot = await prisma.progressSnapshot.upsert({
-    where: { goalId_weekNumber_year: { goalId: goal.id, weekNumber, year } },
-    create: {
-      goalId: goal.id,
-      weekNumber,
-      year,
-      summary: assessment.summary,
-      focusForWeek: assessment.focusForWeek,
-      currentMilestoneId: assessment.currentMilestoneId,
-    },
-    update: {
-      summary: assessment.summary,
-      focusForWeek: assessment.focusForWeek,
-      currentMilestoneId: assessment.currentMilestoneId,
-    },
-  });
-
-  return NextResponse.json({ assessment, snapshot, source });
+  const { data: assessment, source } = await runReview(session.user.id, goal.id);
+  return NextResponse.json({ assessment, source });
 }

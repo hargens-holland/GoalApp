@@ -31,6 +31,8 @@
  *   --rescore <dir>     recompute the deterministic checks over a saved run's
  *                       roadmaps with the current cases and checks — no API
  *                       calls. For when a check or a gold label changes.
+ *   --suite intents     run the Coordinator intent suite instead (see
+ *                       evals/intents.ts). Same --variant / --limit flags.
  */
 
 import fs from "node:fs";
@@ -42,6 +44,7 @@ import { estimateCost, formatUsd } from "@/lib/agents/pricing";
 import type { Roadmap } from "@/lib/agents/schemas";
 import { CaseFileSchema, runChecks, type CheckName, type EvalCase } from "./checks";
 import { judgeRoadmap, type JudgeResult } from "./judge";
+import { runIntentSuite } from "./intents";
 
 // ---------------------------------------------------------------------------
 // Args and environment
@@ -128,6 +131,17 @@ async function mapPool<T, R>(items: T[], size: number, fn: (t: T) => Promise<R>)
 // ---------------------------------------------------------------------------
 
 async function main() {
+  if (arg("suite") === "intents") {
+    if (VARIANTS.length && isDemoMode()) {
+      throw new Error("Model variants requested but no API key is available (or DEMO_MODE=true).");
+    }
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    console.log(`
+intent suite — variants: ${["fallback", ...VARIANTS].join(", ")}
+`);
+    return runIntentSuite(VARIANTS, path.join("evals", "results", stamp), LIMIT);
+  }
+
   const file = CaseFileSchema.parse(
     JSON.parse(fs.readFileSync(path.join("evals", "cases", "roadmap.json"), "utf8"))
   );

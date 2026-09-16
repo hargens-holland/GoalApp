@@ -6,7 +6,7 @@ Turns a stated goal into a milestone roadmap, then schedules the work into the h
 
 <!-- TODO: replace the URL above with the real deployment once it's live. -->
 
-![The week — every task drawn inside the free window it was placed in, and a plain-English request turned into a proposal](docs/screenshots/dashboard.png)
+![The week — every task drawn inside the free window it was placed in](docs/screenshots/dashboard.png)
 
 ---
 
@@ -92,6 +92,8 @@ you have. You see exactly what would change before anything does:
 > → Mark 1 task on Wed 16 as skipped: Intervals 6×400 m
 > → Re-lay Thu 17–Sun 20 so the skipped work is picked up where there's room
 > **[Do it]** [Never mind]
+
+![A request typed in plain English, and the proposal it becomes — nothing changes until "Do it"](docs/screenshots/assistant.png)
 
 Three things keep this safe. The model **only classifies** — it picks from an
 enumerated list and can't invent an action. Every id it returns is checked

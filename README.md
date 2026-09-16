@@ -141,6 +141,33 @@ honours `retry-after`, so reimplementing it badly would be worse. Semantic
 failures — output the SDK considers a success but the schema rejects — can only
 be handled at the application layer, and get one retry before falling back.
 
+![Agent usage — every model call with tokens, cost, latency, and whether the model or the fallback answered](docs/screenshots/usage.png)
+
+**Every call is recorded.** Model, tokens in and out, cache reads, latency,
+estimated cost, and whether the model or the fallback answered — one row per
+call, aggregated at `/admin/usage`. This is how a 39-second call that
+silently fell back was noticed and traced to `max_tokens` being too small for
+a model that thinks before it answers.
+
+**The model is chosen per agent, and the choice is measured.** The Architect
+runs on Opus 5; Progress and the Scheduler run on Sonnet 5. The eval suite in
+`evals/` runs 24 goals through the real Architect entry point, scores nine
+deterministic properties, and has an LLM judge grade four more on a rubric.
+Opus scores 4.67 to Sonnet's 4.27 — a paired difference of +0.39 ±0.17 — for
+2.6× the cost, which is worth it for the one agent whose output everything
+else depends on. The Sonnet assignments are a stated hypothesis until those
+agents have their own harness.
+
+**User text is data, not instructions.** Everything the user wrote is wrapped
+in `<user_input>` tags with a notice to treat it as data. Both eval injection
+cases — one in the goal, one that tries to close the tag from inside an answer
+— are ignored by both models.
+
+**Prompts are shaped for caching.** Stable instructions in a `system` block
+marked cacheable; per-call content in the user turn. The blocks are under the
+cache minimum today, so it's plumbing rather than savings — but it's the shape
+that lets the stable context grow without touching call sites.
+
 ### Demo mode
 
 The public demo runs with `DEMO_MODE=true`, which forces the deterministic path
@@ -176,8 +203,9 @@ roadmaps, current week, and reviews come from the real agents instead.
 | Styling | Tailwind CSS |
 | Database | PostgreSQL via Prisma 6 |
 | Auth | NextAuth (credentials, JWT sessions), bcrypt |
-| LLM | Anthropic API (Claude Opus 4.8) via `@anthropic-ai/sdk`, with Zod-derived structured outputs |
-| Testing | Vitest — 76 unit tests, no database or network required |
+| LLM | Anthropic API via `@anthropic-ai/sdk` — Opus 5 for the Architect, Sonnet 5 for Progress and Scheduler; Zod-derived structured outputs |
+| Testing | Vitest — 124 unit tests, no database or network required; `npm run eval` for the judged Architect eval |
+| Observability | One `AgentCall` row per model call — tokens, cost, latency, fallback reason — surfaced at `/admin/usage` |
 | CI | GitHub Actions — typecheck, tests, production build |
 | Hosting | Vercel + Neon Postgres |
 | Design | One light, neutral theme; the only color in the interface is per-goal OKLCH hue |
@@ -239,8 +267,10 @@ the subdomain setup.
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — system and agent diagrams, the failure-handling
   matrix, data model rationale, and request flows.
 - **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** — hosting, environment variables, operational notes.
+- **[evals/README.md](evals/README.md)** — the Architect eval: cases, checks, judge, first results, and
+  what the harness found on its first run.
 - **[docs/AI_ENGINEERING_ROADMAP.md](docs/AI_ENGINEERING_ROADMAP.md)** — planned additions (tool use, MCP,
-  RAG, caching, evals, agent hosting) and where each plugs into the codebase.
+  RAG, agent hosting) and where each plugs into the codebase.
 
 ---
 
@@ -295,12 +325,43 @@ four demo goals collided. The hue is now assigned at creation to be maximally
 distant from the user's existing goals and stored on the row. Less clever,
 strictly better.
 
+**The eval found four things in its first hour.** The schema described a
+milestone's week as when it is "targeted"; the model read that as a due date
+and every roadmap failed the ordering check, because the timeline and the seed
+had been treating it as a start date. The model's reading was the better one,
+so the app moved. Every plan for "by the end of the year" was 24 weeks long
+against a 16-week deadline, because the model has no clock — the prompt now
+carries today's date. The fallback's own success criteria were unfalsifiable.
+And one of my own checks was wrong: a keyword heuristic for "checkable" flagged
+"replace brake pads on one axle, torque to spec" as vague, so it was removed
+and that property left to the judge. None of it was visible before the harness.
+
+**Telemetry found a fifth.** A replan came back with generic fallback titles.
+The usage page showed one row: `source=fallback`, `reason=unknown_error`, zero
+tokens, 39 seconds. Opus 5 and Sonnet 5 think before they answer and the
+thinking is billed as output, so a 4096-token ceiling that was generous for the
+JSON alone was truncating the response — and the SDK surfaces a truncated
+structured output as a parse *error*, not a `max_tokens` stop reason, so the
+retry meant for exactly that case never fired. Both fixed. Without the row it
+would have looked like the model was having a bad day.
+
+**And a sixth from looking at the screen.** Replanning keeps tasks you've
+finished and replaces the rest — correct — but packed the new ones as if the
+finished ones weren't there, so a fresh 07:00 task landed on top of the 07:00
+run that had already been ticked off. The packer now subtracts kept tasks from
+the day's free windows first.
+
 **What I'd still do differently:**
 
-- **There's no eval harness for prompt quality.** I can prove the output is
-  *well-formed* — that's what the schemas and tests do — but not that a roadmap
-  is *good*. A small graded set of goals with rubric-scored outputs is the
-  obvious next step, and is what I'd build before changing any prompt again.
+- **The eval covers one agent.** The Scheduler and Progress agents have no
+  harness, so their Sonnet assignment is a cost decision I can state but not
+  defend with a number. The Scheduler's is the more interesting one to build:
+  it has a natural deterministic check (every task inside a window) and a
+  natural judge question (is each task specific enough to act on?).
+- **The judge is the same family as the models it grades.** Opus judging Opus
+  vs Sonnet will lean toward Opus. A second judge family, and a few dozen
+  human-labelled cases to report agreement against, are what would make the
+  0.39 a number I'd defend rather than one I'd caveat.
 - **The streak calculation loads every past task the user has ever had** to
   compute a trailing-weeks figure. Fine at demo scale, wrong in principle; it
   should be a windowed query or a maintained counter.

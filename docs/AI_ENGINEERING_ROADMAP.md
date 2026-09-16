@@ -15,6 +15,17 @@ The one rule for every addition: **it must go through
 chokepoint for every model call — schema enforcement, retries, fallbacks,
 logging. New capabilities extend it; they do not route around it.
 
+### Status — 2026-09-16
+
+| Section | State |
+|---|---|
+| Phase 0 hardening | **Done** except the per-visitor demo account. Validation, rate limits, prompt delimiting, headers, cost logging all shipped. |
+| §1 Model routing | **Done and measured** for the Architect (Opus vs Sonnet, `evals/README.md`). Sonnet elsewhere is a hypothesis. |
+| §2 Prompt caching | **Plumbed.** System/user split with `cache_control`; inert until the stable prefix exceeds the per-model minimum. |
+| §7 Evals | **Done for the Architect.** 24 cases, 9 deterministic checks, 4-property judge, `--rescore`, weekly workflow. Scheduler and Progress still need harnesses. |
+| §8 Observability | **Done.** `AgentCall` table, `/admin/usage`. Swap for Langfuse/Braintrust when volume warrants. |
+| §3–§6, §9–§11 | Not started. Recommended next: §5a MCP calendar (needs Google OAuth credentials), then §9 cron for the weekly review. |
+
 ---
 
 ## Phase 0 — Pre-deploy hardening

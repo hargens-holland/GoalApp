@@ -32,7 +32,7 @@ flowchart TB
     end
 
     DB[("PostgreSQL<br/>via Prisma")]
-    LLM["Anthropic API<br/>Claude Opus 4.8"]
+    LLM["Anthropic API<br/>Opus 5 · Sonnet 5, per agent"]
 
     UI -->|"fetch"| API
     UI -.->|"SSR"| Pages
@@ -225,7 +225,7 @@ so every failure resolves to a deterministic fallback and a typed reason:
 | Exceeded 90s timeout | `timeout` | Fallback. |
 | Network failure | `connection_error` | Fallback. |
 | Invalid/revoked key | `auth_error` | Fallback; indicates misconfiguration. |
-| Output failed schema, or hit `max_tokens` mid-object | `invalid_output` | **One retry**, then fallback. |
+| Output failed schema, or was cut off at `max_tokens` (the SDK surfaces this as a parse error) | `invalid_output` | **One retry**, then fallback. |
 | Model declined on safety grounds | `refused` | Fallback immediately — a retry of an identical prompt won't differ. |
 
 **Retry policy is split deliberately.** Transport failures (429/5xx/network) are
@@ -238,9 +238,53 @@ application layer, and get one retry. Twice-unusable output from a constrained
 model is unlikely to improve on a third attempt, and the user is better served
 by an immediate fallback than a third round of latency.
 
-Every call logs `source`, `reason`, and `attempts`. Without that there is no way
-to tell from the outside whether a plan was model-generated or fabricated by the
-fallback — the two produce identical-looking rows.
+Every call logs `source`, `reason`, and `attempts`, and writes an `AgentCall`
+row (see Telemetry). Without that there is no way to tell from the outside
+whether a plan was model-generated or fabricated by the fallback — the two
+produce identical-looking rows.
+
+### Which model, per agent
+
+`lib/agents/models.ts`. The Architect runs on Opus 5: it runs once per goal
+and its output is the structure everything else hangs off. Progress and the
+Scheduler run on Sonnet 5: they run often and their outputs are clamped and
+validated regardless. Each is overridable per agent (`ARCHITECT_MODEL`, …) or
+globally (`ANTHROPIC_MODEL`), and every agent entry point accepts a model
+override so an eval run can pin one.
+
+The Architect choice is measured — see `evals/README.md`: Opus scores 4.67 to
+Sonnet's 4.27 on the judge rubric, a paired difference of +0.39 ±0.17, at 2.6×
+the cost. The Sonnet assignments elsewhere are a stated hypothesis; those agents
+don't have a harness yet.
+
+### Prompt shape and caching
+
+Every prompt is two blocks. The **system** block holds role, rules, and output
+expectations, is identical across calls to the same agent, and is marked
+`cache_control: ephemeral`. The **user** block holds the per-call content — the
+goal, this week's data, today's date. Rendering order is system then user, so
+the stable prefix is what the cache keys on.
+
+Caching only engages above a per-model minimum prefix (512 tokens on Opus 5,
+1024 on Sonnet 5), and these system blocks are shorter than that, so today the
+marker is inert. The split is what lets the stable context grow — a user's full
+roadmap set in the Scheduler's system block, say — and start caching without a
+call-site change. `AgentCall.cacheReadTokens` will show the moment it does.
+
+`max_tokens` is sized with reasoning in mind: Opus 5 and Sonnet 5 think by
+default, the thinking is billed as output, and it counts against the ceiling. A
+week of tasks for four goals needs ~3.7k output tokens after thinking; the
+Scheduler's ceiling is 12000.
+
+### Untrusted text
+
+Every string the user wrote — goal, clarifying answers, task notes, revision
+requests, goal titles that reach the Scheduler — is wrapped in `<user_input>`
+tags by `lib/agents/prompt.ts`, with any attempt to close the tag from inside
+stripped, and every system block carries a notice to treat that text as data.
+Today an injection can only produce a bad plan; the eval suite's two injection
+cases confirm both models ignore them. Once an agent has a tool that writes
+somewhere, this boundary is what matters.
 
 ### Demo mode
 
@@ -383,10 +427,49 @@ scheduling failure degrades to an empty week rather than a failed goal.
 
 ---
 
+## Telemetry
+
+`lib/agents/telemetry.ts` writes one `AgentCall` row per `generate()`: label,
+model, source, reason, attempts, input/output/cache tokens, latency, and an
+estimated cost from `lib/agents/pricing.ts`. The write is fire-and-forget,
+swallows its own errors, and is skipped under the test runner and when
+`AGENT_TELEMETRY=off` (eval runs), so it can never affect the call it
+describes.
+
+`/admin/usage` aggregates the last 30 days: cost, tokens, cache hit rate,
+p50/p95 latency, fallback rate — overall and per agent — plus the reasons
+calls fell back and the 25 most recent. Access is an `ADMIN_EMAILS` allowlist.
+
+This is the layer that found the truncation bug: one row with
+`source=fallback reason=unknown_error`, zero tokens, 39 seconds.
+
+---
+
+## Request handling
+
+**Validation.** `lib/validation.ts` has one zod schema per route body. Every
+string that can reach a prompt has an explicit maximum — goal 500 characters,
+answers 500, notes 2000, revision requests 1000, at most five clarifications —
+which is a cost ceiling as much as input validation. Failures return a 400
+naming the field; the UI mirrors the limits with `maxLength`.
+
+**Rate limiting.** `lib/rate-limit.ts`. Fixed windows counted in Postgres
+with one atomic upsert per request, keyed on `scope:identity`. Signup is 5 per
+IP per hour; the five model-calling routes share 40 per user per hour. Fails
+open with a warning if the database is unreachable. Skipped in demo mode, where
+no model is called and the account is shared. The seam is `check()`; a Redis
+implementation returns the same `Decision`.
+
+**Headers.** `next.config.mjs` sets a CSP, `X-Frame-Options: DENY`, `nosniff`,
+`Referrer-Policy`, and `Permissions-Policy` on every response.
+
+---
+
 ## Auth
 
 NextAuth with credentials and JWT sessions; bcrypt password hashing. `middleware.ts`
-gates `/dashboard`, `/goals/*`, `/schedule` (a redirect to the week view), and `/settings/*`.
+gates `/dashboard`, `/goals/*`, `/schedule` (a redirect to the week view), `/settings/*`,
+and `/admin/*`.
 
 Every route handler independently re-checks the session and verifies ownership
 before touching a record — `middleware` proves you're logged in, not that the
@@ -395,9 +478,9 @@ relation (`task.goal.userId`) rather than trusting an id from the request.
 
 ---
 
-## Testing
+## Testing and evals
 
-`npm test` — 57 tests, no database or network required.
+`npm test` — 124 tests, no database or network required.
 
 The suite targets the logic where bugs are silent rather than loud: week and
 ISO-week-year math, the time-slot packer, the semantic validation layer, and the
@@ -405,4 +488,12 @@ contract between the deterministic fallbacks and the schemas the model is held
 to. `tests/placement.test.ts` includes a regression test for a bug where
 placement results were matched to their inputs positionally even though the
 packer returns them grouped by day — which handed tasks each other's time slots
-whenever the scheduler emitted days out of order.
+whenever the scheduler emitted days out of order. `tests/evals-checks.test.ts`
+pins the eval harness's own graders: the case file is well-formed, the
+deterministic fallback passes every check, and known-bad roadmaps fail the
+check that should catch them.
+
+`npm run eval` is the paid half: model variants through the real
+`generateRoadmap()` entry point, deterministic checks, and an LLM judge on a
+four-property rubric. See `evals/README.md` for the design, the first results,
+and the six things the harness found on its first run.

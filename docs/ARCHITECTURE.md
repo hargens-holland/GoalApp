@@ -96,6 +96,7 @@ flowchart LR
 | **Architect** | `lib/agents/architect.ts` | Goal creation, explicit re-plan | Goal + clarifying answers | `Milestone[]` |
 | **Progress** | `lib/agents/progress.ts` | Weekly review | Roadmap + last 14 days of completions and notes | `ProgressSnapshot`, milestone statuses, `Goal.progress` |
 | **Scheduler** | `lib/agents/scheduler.ts` | Goal creation, adjustment, week regeneration | All active goals' current focus + availability | `Task[]` |
+| **Coordinator** | `lib/agents/coordinator.ts` | When the user types a request | One sentence + the user's goals and this week's tasks | One `Intent` — an action from a fixed list with ids/date filled in. Writes nothing. |
 
 ### Why split them
 
@@ -427,6 +428,35 @@ scheduling failure degrades to an empty week rather than a failed goal.
 
 ---
 
+## The Coordinator, and why it doesn't have tools
+
+`lib/agents/coordinator.ts` + `lib/coordinator/`. The user types a sentence;
+the Coordinator returns one of ten actions with the goal, task, or date it
+needs; `preview()` describes the effects; the user confirms;
+`apply()` executes through `runScheduler`, `runReview`, `reviseRoadmap`, or a
+status update — the same functions every button uses.
+
+Three boundaries, in order of where a bad input would be stopped:
+
+1. **The schema.** `action` is an enum. The model cannot ask for something the
+   app doesn't do.
+2. **`normalizeIntent`.** Every id is checked against the context loaded for
+   this user; anything unknown is dropped, and an action that lost the id it
+   needs becomes "unclear — which goal?". A hallucinated or injected id never
+   reaches a query.
+3. **Confirmation, re-validated.** `/api/assistant/apply` receives the intent
+   back from the client and normalizes it again against fresh data before
+   running. A stale or tampered intent does nothing.
+
+This is orchestration by classifier-plus-dispatcher, not by an agentic loop
+with tools. That is the right first version for three reasons: the set of
+possible actions is enumerable, so it can be graded (`evals/cases/intents.json`,
+25/25 on Sonnet 5); the blast radius of a misread is exactly one confirmed
+action; and when a tool-use loop replaces it, there is a measured baseline to
+compare against. The roadmap's §4 and §11 describe that replacement.
+
+---
+
 ## Telemetry
 
 `lib/agents/telemetry.ts` writes one `AgentCall` row per `generate()`: label,
@@ -480,7 +510,7 @@ relation (`task.goal.userId`) rather than trusting an id from the request.
 
 ## Testing and evals
 
-`npm test` — 124 tests, no database or network required.
+`npm test` — 147 tests, no database or network required.
 
 The suite targets the logic where bugs are silent rather than loud: week and
 ISO-week-year math, the time-slot packer, the semantic validation layer, and the

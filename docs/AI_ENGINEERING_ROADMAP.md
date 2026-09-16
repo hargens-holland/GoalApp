@@ -24,7 +24,9 @@ logging. New capabilities extend it; they do not route around it.
 | §2 Prompt caching | **Plumbed.** System/user split with `cache_control`; inert until the stable prefix exceeds the per-model minimum. |
 | §7 Evals | **Done for the Architect.** 24 cases, 9 deterministic checks, 4-property judge, `--rescore`, weekly workflow. Scheduler and Progress still need harnesses. |
 | §8 Observability | **Done.** `AgentCall` table, `/admin/usage`. Swap for Langfuse/Braintrust when volume warrants. |
-| §3–§6, §9–§11 | Not started. Recommended next: §5a MCP calendar (needs Google OAuth credentials), then §9 cron for the weekly review. |
+| §10 Guardrails / HITL | **Partly done.** Propose-then-confirm on every Coordinator action; ids validated against the user's own data twice. Write tools with staging (§4) still ahead. |
+| §11 Orchestration | **First version done** as classifier + dispatcher (the Coordinator), graded 25/25. The tool-use-loop version, and the comparison against this baseline, is the next step. |
+| §3–§6, §9 | Not started. Recommended next: §5a MCP calendar (needs Google OAuth credentials), then §9 cron for the weekly review. |
 
 ---
 

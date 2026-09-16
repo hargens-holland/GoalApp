@@ -6,7 +6,7 @@ Turns a stated goal into a milestone roadmap, then schedules the work into the h
 
 <!-- TODO: replace the URL above with the real deployment once it's live. -->
 
-![The week — every task drawn inside the free window it was placed in](docs/screenshots/dashboard.png)
+![The week — every task drawn inside the free window it was placed in, and a plain-English request turned into a proposal](docs/screenshots/dashboard.png)
 
 ---
 
@@ -48,7 +48,7 @@ flowchart LR
     style SC fill:#4a3a7a,color:#fff
 ```
 
-Planning is **three separate agents with one job each**, rather than a single
+Planning is **four separate agents with one job each**, rather than a single
 "plan my goal" prompt:
 
 - **Architect** — goal → a roadmap of 3–6 sequential milestones. Runs rarely.
@@ -57,6 +57,10 @@ Planning is **three separate agents with one job each**, rather than a single
   deliberately writes no tasks.
 - **Scheduler** — takes the current focus of *every* active goal plus your
   availability, and produces dated tasks. Runs on any change.
+- **Coordinator** — reads a sentence from you ("can't do today, reschedule",
+  "pause the guitar this week", "how am I doing on Spanish?") and turns it into
+  one of ten actions the app knows how to carry out. It proposes; you confirm;
+  code executes through the same functions the buttons use.
 
 ### Why three agents instead of one prompt
 
@@ -75,6 +79,32 @@ can correct, rather than a silently wrong *week*.
 week is inherently global — the Scheduler sees all active goals at once, which is
 why it can avoid stacking three of them onto the same Tuesday evening. Per-goal
 planning structurally cannot do that.
+
+### Talking to it
+
+The line under the week header takes plain language. The Coordinator agent
+classifies it into one action — clear a day, replan the week, pause or resume
+a goal, skip or complete a task, run a review, revise a roadmap, or answer a
+question — and fills in the goal, task, or date from a short context of what
+you have. You see exactly what would change before anything does:
+
+> *can't do today, reschedule*
+> → Mark 1 task on Wed 16 as skipped: Intervals 6×400 m
+> → Re-lay Thu 17–Sun 20 so the skipped work is picked up where there's room
+> **[Do it]** [Never mind]
+
+Three things keep this safe. The model **only classifies** — it picks from an
+enumerated list and can't invent an action. Every id it returns is checked
+against the user's own goals and tasks, and an action that lost the id it
+needs degrades to "which goal do you mean?". And **nothing runs until you
+confirm**; the confirmation re-validates the intent against fresh data, so a
+stale or tampered request does nothing.
+
+It's a classifier plus a dispatcher rather than a tool-use loop, deliberately.
+The set of things it can do is enumerable, so it can be graded: 25 utterances
+in `evals/cases/intents.json`, including two injection attempts, and Sonnet 5
+gets 25 of 25 at $0.003 a call. When a tool-use loop replaces this, that's
+the baseline it has to beat.
 
 ### Adaptive regeneration
 
@@ -204,7 +234,7 @@ roadmaps, current week, and reviews come from the real agents instead.
 | Database | PostgreSQL via Prisma 6 |
 | Auth | NextAuth (credentials, JWT sessions), bcrypt |
 | LLM | Anthropic API via `@anthropic-ai/sdk` — Opus 5 for the Architect, Sonnet 5 for Progress and Scheduler; Zod-derived structured outputs |
-| Testing | Vitest — 124 unit tests, no database or network required; `npm run eval` for the judged Architect eval |
+| Testing | Vitest — 147 unit tests, no database or network required; `npm run eval` for the judged Architect eval and the Coordinator intent suite |
 | Observability | One `AgentCall` row per model call — tokens, cost, latency, fallback reason — surfaced at `/admin/usage` |
 | CI | GitHub Actions — typecheck, tests, production build |
 | Hosting | Vercel + Neon Postgres |
@@ -267,8 +297,8 @@ the subdomain setup.
 - **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — system and agent diagrams, the failure-handling
   matrix, data model rationale, and request flows.
 - **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** — hosting, environment variables, operational notes.
-- **[evals/README.md](evals/README.md)** — the Architect eval: cases, checks, judge, first results, and
-  what the harness found on its first run.
+- **[evals/README.md](evals/README.md)** — the Architect eval (cases, checks, judge, first results, what the
+  harness found) and the Coordinator intent suite.
 - **[docs/AI_ENGINEERING_ROADMAP.md](docs/AI_ENGINEERING_ROADMAP.md)** — planned additions (tool use, MCP,
   RAG, agent hosting) and where each plugs into the codebase.
 
@@ -350,6 +380,13 @@ finished and replaces the rest — correct — but packed the new ones as if the
 finished ones weren't there, so a fresh 07:00 task landed on top of the 07:00
 run that had already been ticked off. The packer now subtracts kept tasks from
 the day's free windows first.
+
+**A seventh, while wiring the Coordinator.** `runScheduler` told the model "do
+not duplicate these" for every task in the range — including the pending ones
+it was about to delete and the skipped ones that should come back another day.
+The model obliged, and every replan quietly lost content. Only finished tasks
+are on that list now. It had been there since the beginning; it took a feature
+whose whole point is "move today's work to Thursday" to make it visible.
 
 **What I'd still do differently:**
 

@@ -98,15 +98,22 @@ export async function runScheduler(
     availableMinutes: a.availableMinutes,
   }));
 
+  // Only *finished* work is "already scheduled" from the model's point of
+  // view. Pending tasks are about to be replaced, and skipped ones are exactly
+  // the work that should come back on another day — listing either as
+  // "do not duplicate" made the model drop it, and the week quietly lost
+  // content on every replan.
   const outcome = await scheduleTasks({
     goals: schedulerGoals,
     days,
     userId,
-    existingTasks: existing.map((t) => ({
-      goalId: t.goalId,
-      title: t.title,
-      date: toISODate(t.date),
-    })),
+    existingTasks: existing
+      .filter((t) => t.status === "done")
+      .map((t) => ({
+        goalId: t.goalId,
+        title: t.title,
+        date: toISODate(t.date),
+      })),
   });
 
   const tasks = outcome.data.tasks.filter(

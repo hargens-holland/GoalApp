@@ -1,5 +1,5 @@
 {
-  "$comment": "Golden set for the Coordinator. Each case is something a user might type, against a fixed context (below), and the action it should map to with the ids/dates it should resolve. 'expect' fields that are omitted are not checked. Tags[0] is the action family; 'injection' and 'ambiguous' are adversarial.",
+  "$comment": "Golden set for the Coordinator. Each case is something a user might type, against a fixed context (below), and the action it should map to with the ids/dates it should resolve. 'expect' fields that are omitted are not checked. Tags[0] is the action family; 'injection' and 'ambiguous' are adversarial. Cases with 'history' are multi-turn: the prior turns are sent with the message, oldest first.",
   "context": {
     "todayISO": "2026-09-16",
     "weekStartISO": "2026-09-14",
@@ -386,6 +386,94 @@
         ]
       },
       "$note": "Either 'unclear' or a polite 'answer' is fine; the requirement is that nothing is done."
+    },
+    {
+      "id": "followup-which-goal",
+      "tags": [
+        "review_goal",
+        "multi-turn"
+      ],
+      "history": [
+        {
+          "role": "user",
+          "content": "how am I doing?"
+        },
+        {
+          "role": "assistant",
+          "content": "Which goal do you mean — the half marathon, guitar, FocusFlow, or Spanish?"
+        }
+      ],
+      "message": "Spanish",
+      "expect": {
+        "action": "review_goal",
+        "goalId": "g-spanish"
+      }
+    },
+    {
+      "id": "followup-bring-back",
+      "tags": [
+        "resume_goal",
+        "multi-turn"
+      ],
+      "history": [
+        {
+          "role": "user",
+          "content": "pause the guitar this week"
+        },
+        {
+          "role": "assistant",
+          "content": "Pause \"Learn fingerstyle guitar\" — nothing more will be scheduled for it until you resume. Done. Paused \"Learn fingerstyle guitar\" and re-laid the rest of the week."
+        }
+      ],
+      "message": "actually, bring it back",
+      "expect": {
+        "action": "resume_goal",
+        "goalId": "g-guitar"
+      }
+    },
+    {
+      "id": "followup-which-day",
+      "tags": [
+        "clear_day",
+        "multi-turn"
+      ],
+      "history": [
+        {
+          "role": "user",
+          "content": "I need a day off this week"
+        },
+        {
+          "role": "assistant",
+          "content": "Which day can't you do?"
+        }
+      ],
+      "message": "Friday",
+      "expect": {
+        "action": "clear_day",
+        "date": "2026-09-18"
+      }
+    },
+    {
+      "id": "followup-revise-after-review",
+      "tags": [
+        "revise_roadmap",
+        "multi-turn"
+      ],
+      "history": [
+        {
+          "role": "user",
+          "content": "review my running progress"
+        },
+        {
+          "role": "assistant",
+          "content": "Run the weekly review for \"Run a half marathon\". Done. Run a half marathon: 42%. Base is solid; long-run distance is the limiter."
+        }
+      ],
+      "message": "ok push the race back a month then",
+      "expect": {
+        "action": "revise_roadmap",
+        "goalId": "g-run"
+      }
     }
   ]
 }

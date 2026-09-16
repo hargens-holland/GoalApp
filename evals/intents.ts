@@ -23,6 +23,8 @@ export const IntentCaseSchema = z.object({
   id: z.string(),
   $note: z.string().optional(),
   tags: z.array(z.string()).min(1),
+  /** Prior turns, oldest first, for multi-turn cases. */
+  history: z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.string() })).optional(),
   message: z.string(),
   expect: z.object({
     action: z.enum(INTENT_ACTIONS).optional(),
@@ -93,7 +95,7 @@ export async function runIntentSuite(variants: string[], outDir: string, limit?:
           rows.push({ variant, caseId: c.id, tags: c.tags, intent, ...g, latencyMs: Date.now() - t, costUsd: 0 });
           continue;
         }
-        const outcome = await classifyIntent(c.message, ctx, { model: variant });
+        const outcome = await classifyIntent(c.message, ctx, { model: variant, history: c.history });
         if (outcome.source !== "llm") {
           errors.push({ variant, caseId: c.id, detail: `${outcome.reason} after ${outcome.attempts} attempt(s)` });
           continue;

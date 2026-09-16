@@ -56,7 +56,7 @@ export const JudgeScoreSchema = z.object({
     .min(1)
     .max(5)
     .describe("1 = order is arbitrary or a later phase depends on something never built; 3 = reasonable order with uneven pacing; 5 = each milestone sets up the next and the weeks are spread sensibly."),
-  worstProblem: z.string().describe("The single most important weakness, in one sentence. Empty string if none."),
+  worstProblem: z.string().describe("The single most important weakness, in one short sentence. Empty string if none."),
 });
 export type JudgeScore = z.infer<typeof JudgeScoreSchema>;
 
@@ -106,7 +106,9 @@ export async function judgeRoadmap(
   const started = Date.now();
   const message = await getClient().messages.parse({
     model,
-    max_tokens: 1024,
+    // Opus 5 thinks by default and that counts against max_tokens; 1024 cut
+    // two judgements off mid-JSON in the first full run.
+    max_tokens: 4096,
     system: [{ type: "text", text: SYSTEM, cache_control: { type: "ephemeral" } }],
     messages: [
       {

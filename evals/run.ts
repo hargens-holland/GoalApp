@@ -28,6 +28,9 @@
  *   --tag <t>           only cases whose tags include t
  *   --concurrency <n>   parallel cases, default 4
  *   --telemetry         record calls to the app's AgentCall table (off by default)
+ *   --rescore <dir>     recompute the deterministic checks over a saved run's
+ *                       roadmaps with the current cases and checks — no API
+ *                       calls. For when a check or a gold label changes.
  */
 
 import fs from "node:fs";
@@ -128,6 +131,9 @@ async function main() {
   const file = CaseFileSchema.parse(
     JSON.parse(fs.readFileSync(path.join("evals", "cases", "roadmap.json"), "utf8"))
   );
+
+  const rescoreDir = arg("rescore");
+  if (rescoreDir) return rescore(rescoreDir, file.cases);
   let cases: EvalCase[] = file.cases;
   if (TAG) cases = cases.filter((c) => c.tags.includes(TAG));
   if (LIMIT) cases = cases.slice(0, LIMIT);
@@ -242,6 +248,40 @@ async function main() {
     for (const e of errors.slice(0, 5)) console.log(`  ${e.variant} / ${e.caseId} / rep ${e.rep}: ${e.kind} — ${e.detail}`);
   }
   console.log(`\nfull results: ${outDir}\n`);
+}
+
+// ---------------------------------------------------------------------------
+// Rescore
+// ---------------------------------------------------------------------------
+
+/**
+ * Re-run the deterministic checks over the roadmaps a previous run saved.
+ * Judge scores are kept as recorded. Writes results back into the same
+ * directory as rescored.jsonl / rescored-summary.json so the original is
+ * preserved and the two can be diffed.
+ */
+function rescore(dir: string, cases: EvalCase[]) {
+  const byId = new Map(cases.map((c) => [c.id, c]));
+  const rows: Row[] = fs
+    .readFileSync(path.join(dir, "results.jsonl"), "utf8")
+    .trim()
+    .split("\n")
+    .map((l) => JSON.parse(l) as Row)
+    .map((r) => {
+      const c = byId.get(r.caseId);
+      if (!c) return r;
+      const check = runChecks(r.roadmap, c);
+      return { ...r, checks: check.checks, checkScore: check.score, failures: check.failures };
+    });
+  const errors: ErrorRow[] = fs.existsSync(path.join(dir, "errors.jsonl"))
+    ? fs.readFileSync(path.join(dir, "errors.jsonl"), "utf8").trim().split("\n").filter(Boolean).map((l) => JSON.parse(l) as ErrorRow)
+    : [];
+  const variants = Array.from(new Set(rows.map((r) => r.variant)));
+  const summary = variants.map((v) => summarize(v, rows.filter((r) => r.variant === v), errors.filter((e) => e.variant === v)));
+  fs.writeFileSync(path.join(dir, "rescored.jsonl"), rows.map((r) => JSON.stringify(r)).join("\n") + "\n");
+  fs.writeFileSync(path.join(dir, "rescored-summary.json"), JSON.stringify({ rescoredAt: new Date().toISOString(), variants: summary }, null, 2));
+  console.log(`\nrescored ${rows.length} rows from ${dir}\n`);
+  printTable(summary, Math.max(...summary.map((s) => s.scored)));
 }
 
 // ---------------------------------------------------------------------------

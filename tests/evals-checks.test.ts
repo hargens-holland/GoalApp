@@ -85,11 +85,6 @@ describe("known-bad roadmaps fail the right check", () => {
     expect(runChecks(bad, base).failures).toContain("fits_deadline");
   });
 
-  it("criteria_concrete: a criterion that is just vibes", () => {
-    const bad = { milestones: good.milestones.map((m, i) => (i === 0 ? { ...m, successCriteria: "You feel ready for the next phase." } : m)) };
-    expect(runChecks(bad, base).failures).toContain("criteria_concrete");
-  });
-
   it("titles_distinct: two milestones with the same title", () => {
     const bad = { milestones: good.milestones.map((m, i) => (i === 1 ? { ...m, title: "Build a base" } : m)) };
     expect(runChecks(bad, base).failures).toContain("titles_distinct");

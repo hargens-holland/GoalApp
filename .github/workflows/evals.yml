@@ -1,0 +1,58 @@
+name: Evals
+
+# The deterministic half of the eval suite (the checks, and that the fallback
+# is the oracle) runs on every push as part of `npm test`. This workflow is the
+# paid half: model variants plus the LLM judge. It runs on demand and weekly,
+# and needs ANTHROPIC_API_KEY in the repository secrets — without it the job
+# is skipped rather than failed, so a fork without a key stays green.
+
+on:
+  workflow_dispatch:
+    inputs:
+      variants:
+        description: "Space-separated model ids"
+        default: "claude-opus-5 claude-sonnet-5"
+      reps:
+        description: "Repetitions per case"
+        default: "1"
+  schedule:
+    - cron: "0 6 * * 1" # Mondays 06:00 UTC
+
+jobs:
+  eval:
+    name: Architect eval
+    runs-on: ubuntu-latest
+    if: ${{ vars.EVALS_ENABLED == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+        env:
+          DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+          DIRECT_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+
+      - name: Run eval
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+          DIRECT_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+          AGENT_TELEMETRY: "off"
+        run: |
+          VARIANTS=""
+          for v in ${{ github.event.inputs.variants || 'claude-opus-5 claude-sonnet-5' }}; do VARIANTS="$VARIANTS --variant $v"; done
+          npx tsx evals/run.ts $VARIANTS --judge --reps ${{ github.event.inputs.reps || '1' }} | tee eval-output.txt
+
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-results-${{ github.run_number }}
+          path: |
+            evals/results/
+            eval-output.txt
+          retention-days: 90

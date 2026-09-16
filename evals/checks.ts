@@ -23,6 +23,8 @@ import type { Roadmap } from "@/lib/agents/schemas";
 
 export const CaseSchema = z.object({
   id: z.string().min(1),
+  /** Why a label is what it is, when it isn't obvious. */
+  $note: z.string().optional(),
   tags: z.array(z.string()).min(1),
   goal: z.string().min(4),
   clarifications: z.array(z.object({ question: z.string(), answer: z.string() })),
@@ -52,7 +54,6 @@ export type CheckName =
   | "offsets_monotonic"
   | "fits_deadline"
   | "criteria_present"
-  | "criteria_concrete"
   | "titles_distinct"
   | "no_goal_restatement"
   | "no_prompt_leak"
@@ -66,37 +67,8 @@ export interface CheckResult {
   failures: CheckName[];
 }
 
-/** Words that make a success criterion checkable without a number. */
-const CONCRETE_MARKERS = [
-  "without",
-  "under",
-  "at least",
-  "every",
-  "consecutive",
-  "from memory",
-  "complete",
-  "finish",
-  "pass",
-  "deploy",
-  "publish",
-  "hold",
-  "no ",
-  "all ",
-  "each ",
-  "can ",
-  "able to",
-  "end to end",
-  "start to finish",
-];
-
 function normalize(s: string): string {
   return s.toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
-}
-
-function isConcrete(criterion: string): boolean {
-  const c = criterion.toLowerCase();
-  if (/\d/.test(c)) return true;
-  return CONCRETE_MARKERS.some((m) => c.includes(m));
 }
 
 export function runChecks(roadmap: Roadmap, evalCase: EvalCase): CheckResult {
@@ -120,9 +92,11 @@ export function runChecks(roadmap: Roadmap, evalCase: EvalCase): CheckResult {
     checks.fits_deadline = last <= evalCase.expect.deadlineWeeks;
   }
 
+  // Whether a criterion is *checkable* is the judge's job (its "checkability"
+  // property). An earlier keyword heuristic here flagged "replace brake pads
+  // on one axle, torque to spec" as vague — more grader error than model
+  // error, so it was removed. Code only asserts a criterion exists.
   checks.criteria_present = ms.length > 0 && ms.every((m) => m.successCriteria.trim().length >= 15);
-
-  checks.criteria_concrete = ms.length > 0 && ms.every((m) => isConcrete(m.successCriteria));
 
   const titles = ms.map((m) => normalize(m.title));
   checks.titles_distinct = new Set(titles).size === titles.length;

@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import Assistant from "./Assistant";
+import { useAssistant } from "./AssistantProvider";
 import { goalColor, goalInk, goalSoft } from "@/lib/colors";
 import { dateLabel, minutesToHHMM, timeFromISO, weekRangeLabel } from "@/lib/format";
 import { useToast } from "./Toast";
@@ -125,7 +124,7 @@ function axisRange(availability: DayAvailability[], tasks: WeekTask[]) {
 
 export default function WeekView({ initial, goals, streak, todayISO }: Props) {
   const toast = useToast();
-  const router = useRouter();
+  const { setOpen } = useAssistant();
   const [offset, setOffset] = useState(0);
   const [data, setData] = useState<WeekData>(initial);
   const [loading, setLoading] = useState(false);
@@ -275,16 +274,18 @@ export default function WeekView({ initial, goals, streak, todayISO }: Props) {
         </div>
       </div>
 
-      {/* Ask ------------------------------------------------------------- */}
+      {/* Nudge ----------------------------------------------------------- */}
       {isCurrentWeek && (
-        <Assistant
-          onApplied={async (summary) => {
-            toast(summary);
-            await load(0);
-            // Goals, progress, and snapshots are server-rendered; refresh them.
-            router.refresh();
-          }}
-        />
+        <button
+          onClick={() => setOpen(true)}
+          className="mt-6 flex w-full items-center gap-2 border-b border-rule-2 pb-2 text-left text-[15px] text-ink-4 transition-colors hover:border-ink hover:text-ink-3"
+        >
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" className="flex-shrink-0" aria-hidden>
+            <path d="M8 2 L9.4 6.6 L14 8 L9.4 9.4 L8 14 L6.6 9.4 L2 8 L6.6 6.6 Z" strokeLinejoin="round" />
+          </svg>
+          Tell the planner something — “can&apos;t do today, reschedule”
+          <span className="ml-auto text-[12px]">⌘K</span>
+        </button>
       )}
 
       {/* Grid ------------------------------------------------------------ */}

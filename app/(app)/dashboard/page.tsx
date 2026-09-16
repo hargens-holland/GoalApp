@@ -75,6 +75,7 @@ export default async function DashboardPage() {
         scheduledEnd: s.scheduledEnd?.toISOString() ?? null,
         estimatedMinutes: s.estimatedMinutes,
         completed: s.completed,
+        status: s.status,
         notes: s.notes,
         goal: s.goal,
       };

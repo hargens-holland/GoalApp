@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import Assistant from "./Assistant";
 import { goalColor, goalInk, goalSoft } from "@/lib/colors";
 import { dateLabel, minutesToHHMM, timeFromISO, weekRangeLabel } from "@/lib/format";
 import { useToast } from "./Toast";
@@ -30,6 +32,8 @@ export interface WeekTask {
   scheduledEnd: string | null;
   estimatedMinutes: number | null;
   completed: boolean;
+  /** pending | done | skipped */
+  status: string;
   notes: string | null;
   goal: { id: string; title: string; hue: number };
 }
@@ -121,6 +125,7 @@ function axisRange(availability: DayAvailability[], tasks: WeekTask[]) {
 
 export default function WeekView({ initial, goals, streak, todayISO }: Props) {
   const toast = useToast();
+  const router = useRouter();
   const [offset, setOffset] = useState(0);
   const [data, setData] = useState<WeekData>(initial);
   const [loading, setLoading] = useState(false);
@@ -148,7 +153,7 @@ export default function WeekView({ initial, goals, streak, todayISO }: Props) {
     const next = !task.completed;
     setData((d) => ({
       ...d,
-      tasks: d.tasks.map((t) => (t.id === task.id ? { ...t, completed: next } : t)),
+      tasks: d.tasks.map((t) => (t.id === task.id ? { ...t, completed: next, status: next ? "done" : "pending" } : t)),
     }));
     await fetch(`/api/tasks/${task.id}`, {
       method: "PATCH",
@@ -270,6 +275,18 @@ export default function WeekView({ initial, goals, streak, todayISO }: Props) {
         </div>
       </div>
 
+      {/* Ask ------------------------------------------------------------- */}
+      {isCurrentWeek && (
+        <Assistant
+          onApplied={async (summary) => {
+            toast(summary);
+            await load(0);
+            // Goals, progress, and snapshots are server-rendered; refresh them.
+            router.refresh();
+          }}
+        />
+      )}
+
       {/* Grid ------------------------------------------------------------ */}
       <div className="mt-7 border-t border-rule">
         {/* Day headers */}
@@ -352,10 +369,10 @@ export default function WeekView({ initial, goals, streak, todayISO }: Props) {
                       style={{
                         top,
                         height,
-                        background: goalSoft(t.goal.hue),
-                        borderLeft: `2px solid ${goalColor(t.goal.hue)}`,
+                        background: t.status === "skipped" ? "transparent" : goalSoft(t.goal.hue),
+                        borderLeft: `2px ${t.status === "skipped" ? "dashed" : "solid"} ${goalColor(t.goal.hue)}`,
                         color: goalInk(t.goal.hue),
-                        opacity: t.completed ? 0.5 : 1,
+                        opacity: t.completed || t.status === "skipped" ? 0.5 : 1,
                       }}
                     >
                       <div className="px-[7px] py-[3px]">
@@ -366,7 +383,7 @@ export default function WeekView({ initial, goals, streak, todayISO }: Props) {
                             </div>
                             <div
                               className={`${twoLines ? "line-clamp-2" : "truncate"} text-[12px] font-medium leading-[1.25]`}
-                              style={{ textDecoration: t.completed ? "line-through" : "none" }}
+                              style={{ textDecoration: t.completed || t.status === "skipped" ? "line-through" : "none" }}
                             >
                               {t.title}
                             </div>
@@ -376,7 +393,7 @@ export default function WeekView({ initial, goals, streak, todayISO }: Props) {
                             <span className="flex-shrink-0 font-mono text-[10px] opacity-80">{timeFromISO(t.scheduledStart)}</span>
                             <span
                               className="truncate font-medium"
-                              style={{ textDecoration: t.completed ? "line-through" : "none" }}
+                              style={{ textDecoration: t.completed || t.status === "skipped" ? "line-through" : "none" }}
                             >
                               {t.title}
                             </span>
@@ -530,8 +547,13 @@ function TaskRow({
           onClick={onToggle}
           aria-label={task.completed ? "Mark not done" : "Mark done"}
           className="mt-[3px] flex h-[16px] w-[16px] flex-shrink-0 items-center justify-center rounded-sm border transition-colors"
-          style={{ borderColor: task.completed ? color : "rgba(21,23,28,0.35)", background: task.completed ? color : "transparent" }}
+          style={{
+            borderColor: task.completed ? color : task.status === "skipped" ? "rgba(21,23,28,0.2)" : "rgba(21,23,28,0.35)",
+            borderStyle: task.status === "skipped" ? "dashed" : "solid",
+            background: task.completed ? color : "transparent",
+          }}
         >
+          {task.status === "skipped" && !task.completed && <span className="h-px w-[8px] bg-ink-4" />}
           {task.completed && (
             <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="#f4f5f7" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M2 5.2 L4.2 7.4 L8 3.2" />
@@ -542,7 +564,10 @@ function TaskRow({
           {showDate ? `${DOW[new Date(task.date).getUTCDay()]} ${new Date(task.date).getUTCDate()}` : timeFromISO(task.scheduledStart) || "—"}
         </span>
         <div className="min-w-0 flex-1">
-          <div className={`text-[15px] ${task.completed ? "text-ink-3 line-through" : "text-ink"}`}>{task.title}</div>
+          <div className={`text-[15px] ${task.completed || task.status === "skipped" ? "text-ink-3 line-through" : "text-ink"}`}>
+            {task.title}
+            {task.status === "skipped" && <span className="ml-2 text-[12px] no-underline text-ink-4">skipped</span>}
+          </div>
           {task.description && <div className="mt-px text-[13px] text-ink-3">{task.description}</div>}
           {open && (
             <textarea

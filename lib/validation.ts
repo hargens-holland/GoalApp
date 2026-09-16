@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { IntentSchema } from "@/lib/agents/schemas";
 
 /**
  * Request-body contracts for every API route.
@@ -27,6 +28,7 @@ export const LIMITS = {
   passwordMin: 10,
   passwordMax: 128,
   weekOffset: 52,
+  assistantMessage: 500,
 } as const;
 
 const trimmed = (max: number, min = 0) => z.string().trim().min(min).max(max);
@@ -86,6 +88,14 @@ export const PutAvailabilityBody = z.object({
 
 export const ScheduleBody = z.object({
   weekOffset: z.number().int().min(-LIMITS.weekOffset).max(LIMITS.weekOffset).default(0),
+});
+
+export const AssistantBody = z.object({
+  message: trimmed(LIMITS.assistantMessage, 2),
+});
+
+export const AssistantApplyBody = z.object({
+  intent: IntentSchema,
 });
 
 export const SignupBody = z.object({

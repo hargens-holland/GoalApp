@@ -82,18 +82,21 @@ planning structurally cannot do that.
 
 ### Talking to it
 
-The line under the week header takes plain language. The Coordinator agent
-classifies it into one action — clear a day, replan the week, pause or resume
-a goal, skip or complete a task, run a review, revise a roadmap, or answer a
-question — and fills in the goal, task, or date from a short context of what
-you have. You see exactly what would change before anything does:
+The **Planner** panel (top bar, or ⌘K) is a chat with the Coordinator agent.
+Say what changed in plain language; it classifies the message into one action
+— clear a day, replan the week, pause or resume a goal, skip or complete a
+task, run a review, revise a roadmap, or answer a question — and fills in the
+goal, task, or date from a short context of what you have. It keeps the last
+few turns, so "how am I doing?" → "which goal?" → "Spanish" resolves, and
+"actually, bring it back" after a pause means that goal. You see exactly what
+would change before anything does:
 
 > *can't do today, reschedule*
 > → Mark 1 task on Wed 16 as skipped: Intervals 6×400 m
 > → Re-lay Thu 17–Sun 20 so the skipped work is picked up where there's room
 > **[Do it]** [Never mind]
 
-![A request typed in plain English, and the proposal it becomes — nothing changes until "Do it"](docs/screenshots/assistant.png)
+![The Planner panel: a review run through conversation, and a reschedule waiting on "Do it"](docs/screenshots/assistant.png)
 
 Three things keep this safe. The model **only classifies** — it picks from an
 enumerated list and can't invent an action. Every id it returns is checked
@@ -103,10 +106,10 @@ confirm**; the confirmation re-validates the intent against fresh data, so a
 stale or tampered request does nothing.
 
 It's a classifier plus a dispatcher rather than a tool-use loop, deliberately.
-The set of things it can do is enumerable, so it can be graded: 25 utterances
-in `evals/cases/intents.json`, including two injection attempts, and Sonnet 5
-gets 25 of 25 at $0.003 a call. When a tool-use loop replaces this, that's
-the baseline it has to beat.
+The set of things it can do is enumerable, so it can be graded: 29 utterances
+in `evals/cases/intents.json` — including two injection attempts and four
+multi-turn follow-ups — and Sonnet 5 gets 29 of 29 at $0.003 a call. When a
+tool-use loop replaces this, that's the baseline it has to beat.
 
 ### Adaptive regeneration
 
@@ -236,7 +239,7 @@ roadmaps, current week, and reviews come from the real agents instead.
 | Database | PostgreSQL via Prisma 6 |
 | Auth | NextAuth (credentials, JWT sessions), bcrypt |
 | LLM | Anthropic API via `@anthropic-ai/sdk` — Opus 5 for the Architect, Sonnet 5 for Progress and Scheduler; Zod-derived structured outputs |
-| Testing | Vitest — 147 unit tests, no database or network required; `npm run eval` for the judged Architect eval and the Coordinator intent suite |
+| Testing | Vitest — 147 unit tests over the pure logic (they need no database or API key, so they run in a second anywhere); `npm run eval` for the paid half — the judged Architect eval and the Coordinator intent suite |
 | Observability | One `AgentCall` row per model call — tokens, cost, latency, fallback reason — surfaced at `/admin/usage` |
 | CI | GitHub Actions — typecheck, tests, production build |
 | Hosting | Vercel + Neon Postgres |

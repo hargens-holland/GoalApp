@@ -129,6 +129,8 @@ currently stands. Do not invent tasks — that is another agent's job.
 Use the exact milestone ids shown. Set currentMilestoneId to the milestone the
 user is actively working on, or null if none applies. Base the assessment on
 what was actually completed, and pay attention to any notes the user left.
+Write summary and focusForWeek to the user directly ("you", not "the user"),
+in two or three plain sentences.
 
 ${UNTRUSTED_NOTICE}`,
     prompt: `Goal:

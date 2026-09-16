@@ -90,8 +90,16 @@ export const ScheduleBody = z.object({
   weekOffset: z.number().int().min(-LIMITS.weekOffset).max(LIMITS.weekOffset).default(0),
 });
 
+export const ChatTurnSchema = z.object({
+  role: z.enum(["user", "assistant"]),
+  content: trimmed(LIMITS.assistantMessage * 2, 1),
+});
+
 export const AssistantBody = z.object({
   message: trimmed(LIMITS.assistantMessage, 2),
+  // The recent transcript, oldest first, so follow-ups resolve. Capped so a
+  // client cannot ship a novel as context.
+  history: z.array(ChatTurnSchema).max(10).default([]),
 });
 
 export const AssistantApplyBody = z.object({

@@ -41,6 +41,12 @@ export interface CoordinatorTask {
   goalId: string;
 }
 
+/** One prior turn of the conversation, oldest first. */
+export interface ChatTurn {
+  role: "user" | "assistant";
+  content: string;
+}
+
 export interface CoordinatorContext {
   /** YYYY-MM-DD */
   todayISO: string;
@@ -183,8 +189,15 @@ export function normalizeIntent(intent: Intent, ctx: CoordinatorContext): Intent
 export async function classifyIntent(
   message: string,
   ctx: CoordinatorContext,
-  opts: { userId?: string; model?: string } = {}
+  opts: { userId?: string; model?: string; history?: ChatTurn[] } = {}
 ): Promise<AgentOutcome<Intent>> {
+  // The last few turns let a follow-up resolve: "how am I doing?" → "which
+  // goal?" → "Spanish". Both roles are delimited as untrusted — the assistant
+  // turns are ours, but they arrive back from the client, which could have
+  // edited them.
+  const historyText = opts.history?.length
+    ? opts.history.map((t) => `${t.role === "user" ? "User" : "Assistant"}: ${untrusted(t.content).replace(/\n/g, " ")}`).join("\n")
+    : "none";
   const goalsText = ctx.goals.length
     ? ctx.goals
         .map((g) => `[goalId:${g.id}] status=${g.status} progress=${g.progress}%\n${untrusted(`title: ${g.title}\ncurrent milestone: ${g.activeMilestone ?? "n/a"}`)}`)
@@ -217,6 +230,11 @@ Rules:
   you can answer from the context ("what's on Thursday?") is answer.
 - Anything about changing the plan itself — more time, less time, different
   milestones — is revise_roadmap, with the user's words in request.
+- Use the conversation so far to resolve short follow-ups: if you asked "which
+  goal?" and they answer "Spanish", that is the goal. If they say "actually,
+  bring it back" after a pause, that is resume_goal for the same goal.
+- One action per message. If they ask for two things, take the first and say
+  in message that they can ask for the second next.
 - Keep message short and concrete: name the goal or day, say what will happen.
 
 ${UNTRUSTED_NOTICE}`,
@@ -228,7 +246,10 @@ ${goalsText}
 This week's tasks:
 ${tasksText}
 
-The user says:
+Conversation so far:
+${historyText}
+
+The user says now:
 ${untrusted(message)}`,
   });
 

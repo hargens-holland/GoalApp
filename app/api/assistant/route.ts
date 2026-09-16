@@ -23,7 +23,10 @@ export async function POST(request: Request) {
   if (!parsed.ok) return parsed.response;
 
   const ctx = await loadContext(session.user.id);
-  const { data: intent, source } = await classifyIntent(parsed.data.message, ctx, { userId: session.user.id });
+  const { data: intent, source } = await classifyIntent(parsed.data.message, ctx, {
+    userId: session.user.id,
+    history: parsed.data.history,
+  });
   const proposal = preview(intent, ctx);
   return NextResponse.json({ ...proposal, source });
 }

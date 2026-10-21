@@ -2,10 +2,6 @@
 
 Turns a stated goal into a milestone roadmap, then schedules the work into the hours you're actually free.
 
-**[Live demo →](https://goals.example.com)** · one click to explore, no signup
-
-<!-- TODO: replace the URL above with the real deployment once it's live. -->
-
 ![The week — every task drawn inside the free window it was placed in](docs/screenshots/dashboard.png)
 
 ---

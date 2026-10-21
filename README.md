@@ -300,8 +300,6 @@ the subdomain setup.
 - **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** — hosting, environment variables, operational notes.
 - **[evals/README.md](evals/README.md)** — the Architect eval (cases, checks, judge, first results, what the
   harness found) and the Coordinator intent suite.
-- **[docs/AI_ENGINEERING_ROADMAP.md](docs/AI_ENGINEERING_ROADMAP.md)** — planned additions (tool use, MCP,
-  RAG, agent hosting) and where each plugs into the codebase.
 
 ---
 
